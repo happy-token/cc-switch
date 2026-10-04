@@ -1,5 +1,5 @@
 //! Browser authorization never imports browser cookies into the desktop application.
-use crate::{provider::Provider, store::AppState};
+use crate::store::AppState;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use once_cell::sync::Lazy;
 use reqwest::Client;
@@ -14,6 +14,9 @@ use std::sync::{
 use std::time::Duration;
 use tauri::{Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
+#[path = "happy_token_providers.rs"]
+mod providers;
+use providers::Protocol;
 const GATEWAY: &str = "https://gateway.happy-token.cn";
 
 #[derive(Clone, Serialize)]
@@ -62,11 +65,13 @@ struct BrowserGrant {
 pub struct BrowserLogin {
     code: String,
 }
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct GroupSnapshot {
     name: String,
     key: String,
     models: Vec<String>,
+    #[serde(default, rename = "modelProtocols")]
+    model_protocols: std::collections::HashMap<String, Vec<Protocol>>,
 }
 #[derive(Deserialize)]
 struct Snapshot {
@@ -251,7 +256,7 @@ fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
         || snapshot.account.is_empty()
         || snapshot.account.len() > 1024
         || snapshot.account.chars().any(char::is_control)
-        || snapshot.groups.is_empty()
+        || (snapshot.groups.is_empty() && snapshot.warnings.is_empty())
         || snapshot.groups.len() > 32
         || snapshot.warnings.len() > 32
     {
@@ -280,6 +285,11 @@ fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
             || group.key.len() > 512
             || group.key.contains('*')
             || group.key.chars().any(char::is_control)
+            || group.model_protocols.len() > group.models.len()
+            || group
+                .model_protocols
+                .iter()
+                .any(|(model, protocols)| !group.models.contains(model) || protocols.len() > 4)
             || group.models.len() > 10000
             || group
                 .models
@@ -301,18 +311,42 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
         warnings: snapshot.warnings,
     };
     for group in snapshot.groups {
-        let providers = build_providers(snapshot.uid, &group.name, &group.key, &group.models);
+        let providers = providers::build_providers(snapshot.uid, &group);
         if providers.is_empty() {
             result.warnings.push(format!(
-                "{}：没有适用于 Claude Code、Codex 或 Gemini 的模型",
+                "{}：缺少适用于编码助手的模型/协议声明，或不支持函数工具调用，未导入",
                 group.name
             ));
             continue;
         }
+        if group.models.iter().any(|m| {
+            m.to_ascii_lowercase().starts_with("gemini-")
+                && !group
+                    .model_protocols
+                    .get(m)
+                    .is_some_and(|p| p.contains(&Protocol::Gemini))
+        }) {
+            result.warnings.push(format!(
+                "{}：未声明 Gemini 原生接口，未配置 Gemini CLI；其他应用仍可使用兼容模型",
+                group.name
+            ));
+        }
+        if providers
+            .iter()
+            .any(|(_, p)| p.notes.as_ref().is_some_and(|n| n.contains("需要使用")))
+        {
+            result.warnings.push(format!(
+                "{}：部分配置需要选择路由模式进行协议转换；函数工具调用仍需真实任务验收",
+                group.name
+            ));
+        }
         let handle = app.clone();
-        let count = tauri::async_runtime::spawn_blocking(move || {
+        let import_group = group.clone();
+        let uid = snapshot.uid;
+        let (count, review_apps) = tauri::async_runtime::spawn_blocking(move || {
             let state = handle.state::<AppState>();
             let mut count = 0;
+            let mut review_apps = Vec::new();
             for (app_type, mut provider) in providers {
                 // Save to the library only; switching uses CC Switch's normal config writer.
                 // Re-sync refreshes credentials while retaining user customizations.
@@ -321,6 +355,18 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
                     .get_provider_by_id(&provider.id, app_type)
                     .map_err(|_| "无法读取已有 HappyToken 配置")?
                 {
+                    providers::migrate_legacy(uid, &import_group, app_type, &mut existing);
+                    let existing_format = existing
+                        .meta
+                        .as_ref()
+                        .and_then(|meta| meta.api_format.as_deref());
+                    let generated_format = provider
+                        .meta
+                        .as_ref()
+                        .and_then(|meta| meta.api_format.as_deref());
+                    if existing_format != generated_format && !review_apps.contains(&app_type) {
+                        review_apps.push(app_type);
+                    }
                     refresh_key(
                         &mut existing.settings_config,
                         &provider.settings_config,
@@ -344,15 +390,19 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
                     .map_err(|_| "无法保存 HappyToken 配置")?;
                 count += 1;
             }
-            Ok::<_, String>(count)
+            Ok::<_, String>((count, review_apps))
         })
         .await
         .map_err(|_| "配置保存任务失败")??;
         result.providers += count;
+        if !review_apps.is_empty() {
+            result.warnings.push(format!(
+                "{}：{} 的已有协议设置保留，请在供应商编辑器核对",
+                group.name,
+                review_apps.join("、")
+            ));
+        }
         result.groups.push(group.name);
-    }
-    if result.providers == 0 {
-        return Err(format!("未导入任何配置。{}", result.warnings.join("；")));
     }
     let summary = AccountSummary {
         account: result.account.clone(),
@@ -368,80 +418,45 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
     Ok(result)
 }
 
-fn build_providers(
-    uid: u64,
-    group: &str,
-    key: &str,
-    models: &[String],
-) -> Vec<(&'static str, Provider)> {
-    let mut result = Vec::new();
-    for app_type in ["claude", "codex", "gemini"] {
-        let model = models.iter().rev().find(|model| {
-            let name = model.to_ascii_lowercase();
-            match app_type {
-                "claude" => name.starts_with("claude-"),
-                "gemini" => {
-                    name.starts_with("gemini-")
-                        && !name.contains("image")
-                        && !name.contains("embedding")
-                }
-                _ => {
-                    (name.starts_with("gpt-")
-                        || name.starts_with("o1")
-                        || name.starts_with("o3")
-                        || name.starts_with("o4"))
-                        && ![
-                            "image",
-                            "audio",
-                            "realtime",
-                            "transcribe",
-                            "tts",
-                            "search",
-                            "instruct",
-                        ]
-                        .iter()
-                        .any(|part| name.contains(part))
-                }
-            }
-        });
-        let Some(model) = model else {
-            continue;
-        };
-        let settings = match app_type {
-            "claude" => {
-                json!({"env": {"ANTHROPIC_BASE_URL": GATEWAY, "ANTHROPIC_AUTH_TOKEN": key, "ANTHROPIC_MODEL": model,
-                "ANTHROPIC_DEFAULT_HAIKU_MODEL": model, "ANTHROPIC_DEFAULT_SONNET_MODEL": model, "ANTHROPIC_DEFAULT_OPUS_MODEL": model}})
-            }
-            "gemini" => {
-                json!({"env": {"GOOGLE_GEMINI_BASE_URL": GATEWAY, "GEMINI_API_KEY": key, "GEMINI_MODEL": model}})
-            }
-            _ => {
-                // JSON string quoting is valid TOML basic-string quoting for model identifiers.
-                let model_literal = serde_json::to_string(model).unwrap();
-                json!({"auth": {"OPENAI_API_KEY": key}, "config": format!(
-                    "model_provider = \"happy_token\"\nmodel = {model_literal}\n\n[model_providers.happy_token]\nname = \"HappyToken\"\nbase_url = \"{GATEWAY}/v1\"\nwire_api = \"responses\"\nrequires_openai_auth = true\n")})
-            }
-        };
-        let hash = format!("{:x}", Sha256::digest(format!("{uid}\0{group}").as_bytes()));
-        let mut provider = Provider::with_id(
-            format!("happy-token-{hash}-{app_type}"),
-            format!("HappyToken · {group}"),
-            settings,
-            Some("https://www.happy-token.cn".into()),
-        );
-        provider.category = Some("aggregator".into());
-        provider.created_at = Some(chrono::Utc::now().timestamp_millis());
-        provider.notes = Some(format!(
-            "HappyToken 账户 {uid} · 分组 {group}，登录后自动同步"
-        ));
-        result.push((app_type, provider));
-    }
-    result
-}
-
 fn refresh_key(existing: &mut Value, generated: &Value, app_type: &str) -> Result<(), String> {
     let (section, field) = match app_type {
         "codex" => ("auth", "OPENAI_API_KEY"),
+        "claude-desktop" => ("env", "ANTHROPIC_AUTH_TOKEN"),
+        "opencode" | "mcode" => ("options", "apiKey"),
+        "openclaw" | "pi" => {
+            existing
+                .as_object_mut()
+                .ok_or("已有配置格式无效")?
+                .insert("apiKey".into(), generated["apiKey"].clone());
+            return Ok(());
+        }
+        "hermes" => {
+            existing
+                .as_object_mut()
+                .ok_or("已有配置格式无效")?
+                .insert("api_key".into(), generated["api_key"].clone());
+            return Ok(());
+        }
+        "grokbuild" => {
+            let config = existing
+                .get("config")
+                .and_then(Value::as_str)
+                .ok_or("已有 Grok 配置格式无效")?;
+            let mut doc = config
+                .parse::<toml_edit::DocumentMut>()
+                .map_err(|_| "已有 Grok 配置格式无效")?;
+            let profile = crate::grok_config::extract_model_config(config)
+                .ok_or("已有 Grok 配置格式无效")?
+                .profile;
+            let key = crate::grok_config::extract_model_config(
+                generated["config"].as_str().ok_or("Grok 配置格式无效")?,
+            )
+            .and_then(|c| c.api_key)
+            .ok_or("Grok 配置缺少 Key")?;
+            doc["model"][&profile]["api_key"] = toml_edit::value(key);
+            existing["config"] = Value::String(doc.to_string());
+            return Ok(());
+        }
         "claude" => ("env", "ANTHROPIC_AUTH_TOKEN"),
         _ => ("env", "GEMINI_API_KEY"),
     };
@@ -449,65 +464,21 @@ fn refresh_key(existing: &mut Value, generated: &Value, app_type: &str) -> Resul
         .get_mut(section)
         .and_then(Value::as_object_mut)
         .ok_or("已有配置格式无效，请修复后重新同步")?;
-    settings.insert(field.into(), generated[section][field].clone());
+    let target = if field == "ANTHROPIC_AUTH_TOKEN"
+        && !settings.contains_key(field)
+        && settings.contains_key("ANTHROPIC_API_KEY")
+    {
+        "ANTHROPIC_API_KEY"
+    } else {
+        field
+    };
+    settings.insert(target.into(), generated[section][field].clone());
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn all_groups_have_distinct_stable_account_scoped_provider_ids() {
-        let models = vec!["gpt-5.6".to_string()];
-        let default = build_providers(42, "default", "sk-test", &models);
-        let again = build_providers(42, "default", "sk-new", &models);
-        let pro = build_providers(42, "Pro", "sk-test", &models);
-        let web = build_providers(42, "GPT Web", "sk-test", &models);
-        let other_account = build_providers(43, "default", "sk-test", &models);
-        assert_eq!(default[0].1.id, again[0].1.id);
-        for other in [pro, web, other_account] {
-            assert_ne!(default[0].1.id, other[0].1.id);
-        }
-        assert_eq!(default[0].0, "codex");
-        let config: toml::Value =
-            toml::from_str(default[0].1.settings_config["config"].as_str().unwrap()).unwrap();
-        assert_eq!(config["model"].as_str(), Some("gpt-5.6"));
-        assert_eq!(
-            config["model_providers"]["happy_token"]["wire_api"].as_str(),
-            Some("responses")
-        );
-    }
-
-    #[test]
-    fn models_are_filtered_by_app_and_non_coding_models_are_skipped() {
-        let models = [
-            "claude-sonnet-4-6",
-            "gemini-2.5-pro",
-            "gpt-5.6",
-            "gpt-image-2",
-            "gpt-audio",
-            "gemini-image",
-        ]
-        .map(str::to_string);
-        let providers = build_providers(42, "Pro", "sk-test", &models);
-        assert_eq!(providers.len(), 3);
-        assert_eq!(
-            providers[0].1.settings_config["env"]["ANTHROPIC_MODEL"],
-            "claude-sonnet-4-6"
-        );
-        assert_eq!(
-            providers[2].1.settings_config["env"]["GEMINI_MODEL"],
-            "gemini-2.5-pro"
-        );
-        assert!(build_providers(
-            42,
-            "Image",
-            "sk-test",
-            &["gpt-image-2".into(), "gemini-image".into()]
-        )
-        .is_empty());
-    }
 
     #[test]
     fn browser_grants_and_snapshots_reject_untrusted_values() {
@@ -531,6 +502,7 @@ mod tests {
                 name: "default".into(),
                 key: "sk-test".into(),
                 models: vec!["gpt-5".into()],
+                model_protocols: Default::default(),
             }],
             warnings: vec![],
         };
@@ -542,17 +514,75 @@ mod tests {
             name: "default".into(),
             key: "sk-test".into(),
             models: vec![],
+            model_protocols: Default::default(),
         });
         assert!(validate_snapshot(&snapshot).is_err());
     }
 
     #[test]
     fn resync_preserves_user_model_and_other_settings() {
-        let generated = build_providers(42, "default", "sk-new", &["gpt-5.6".into()]);
+        let generated = json!({"auth": {"OPENAI_API_KEY": "sk-new"}});
         let mut existing = json!({"auth": {"OPENAI_API_KEY": "sk-old", "other": true}, "config": "custom model config"});
-        refresh_key(&mut existing, &generated[0].1.settings_config, "codex").unwrap();
+        refresh_key(&mut existing, &generated, "codex").unwrap();
         assert_eq!(existing["auth"]["OPENAI_API_KEY"], "sk-new");
         assert_eq!(existing["auth"]["other"], true);
         assert_eq!(existing["config"], "custom model config");
+    }
+
+    #[test]
+    fn protocol_snapshot_wire_format_is_validated_and_web_only_account_can_login() {
+        let mut value = json!({"uid": 42, "account": "Fixture", "groups": [{"name": "default", "key": "sk-test-only", "models": ["gpt-5"], "modelProtocols": {"gpt-5": ["chat"]}}], "warnings": []});
+        let snapshot: Snapshot = serde_json::from_value(value.clone()).unwrap();
+        validate_snapshot(&snapshot).unwrap();
+        assert_eq!(
+            snapshot.groups[0].model_protocols["gpt-5"],
+            vec![Protocol::Chat]
+        );
+        value["groups"][0]["modelProtocols"]["gpt-5"] = json!(["unknown"]);
+        assert!(serde_json::from_value::<Snapshot>(value.clone()).is_err());
+        value["groups"] = json!([]);
+        value["warnings"] = json!(["gpt-web：不支持函数工具调用"]);
+        validate_snapshot(&serde_json::from_value::<Snapshot>(value).unwrap()).unwrap();
+    }
+
+    #[test]
+    fn resync_refreshes_native_client_credentials_without_changing_models() {
+        for (app, mut existing, generated, pointer) in [
+            (
+                "opencode",
+                json!({"options": {"apiKey": "old", "custom": true}, "models": {"custom-model": {}}}),
+                json!({"options": {"apiKey": "new"}}),
+                "/options/apiKey",
+            ),
+            (
+                "mcode",
+                json!({"options": {"apiKey": "old"}, "models": {"custom-model": {}}}),
+                json!({"options": {"apiKey": "new"}}),
+                "/options/apiKey",
+            ),
+            (
+                "openclaw",
+                json!({"apiKey": "old", "models": [{"id": "custom-model"}]}),
+                json!({"apiKey": "new"}),
+                "/apiKey",
+            ),
+            (
+                "pi",
+                json!({"apiKey": "old", "models": [{"id": "custom-model"}]}),
+                json!({"apiKey": "new"}),
+                "/apiKey",
+            ),
+            (
+                "hermes",
+                json!({"api_key": "old", "models": [{"id": "custom-model"}]}),
+                json!({"api_key": "new"}),
+                "/api_key",
+            ),
+        ] {
+            let models = existing["models"].clone();
+            refresh_key(&mut existing, &generated, app).unwrap();
+            assert_eq!(existing.pointer(pointer).unwrap(), "new");
+            assert_eq!(existing["models"], models);
+        }
     }
 }

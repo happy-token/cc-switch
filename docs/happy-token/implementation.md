@@ -85,6 +85,53 @@
 
 登录后自动启用策略：已询问是否首次启用 Default、后续保留用户选择，或仅导入后手动启用。暂按仅导入、由用户选择分组启用实现；收到答复后更新本节和实现。
 
+## 按应用和协议导入（2026-10-04）
+
+### 已确认需求与依据
+
+- 用户要求覆盖侧栏每个 Agent，区分分组模型实际使用的协议，并调查 GPT Web 能否用于 Codex；不改变原有页面或新建协议代理。
+- 当前 Codex 官方配置只接受 `wire_api = "responses"`，不能通过写 `chat` 让新版 Codex 直连 Chat Completions。依据：[官方配置](https://developers.openai.com/codex/config-reference/)。
+- 原 CC Switch 已实现 Codex Responses ↔ Chat Completions / Anthropic、Claude Messages ↔ Chat / Responses / Gemini 转换，并通过现有路由模式启用；导入仅使用其已有 `meta.apiFormat` 与客户端配置结构，不修改转换器。
+- 只读实测公开 `/api/pricing`：当前 default / gpt-pro / gpt-web 文本模型的 supported_endpoint_types 多为 openai（Chat），缺少其他接口声明；不能把它当作每个分组实际仅支持 Chat 的结论。NewAPI rc.21 对同名模型跨渠道汇总协议，不能替代逐渠道验证。依据：[pricing.go](https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.21/model/pricing.go)、[接口类型](https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.21/constant/endpoint_type.go)。
+- `../HappyAPIWeb/docs/gpt-onboarding.md` 已明确 gpt-pro 使用 Responses、default 按模型区分、gpt-web 仅供网页助手。gpt-pro 的编程 GPT 模型使用这一明确服务策略，其他分组不按名称推断接口。
+- `../HappyServices/chatgpt2api/README.md` 部署记录对应源码 revision e55aef2829e7bf1d7256d6ff3feb4b40b02743d2：ChatGPT2API 实际有 Responses 兼容处理，但普通函数工具被替换成“工具不可用”的文字提示，文本流不生成编码所需的普通 function/tool_calls 结果。不能把它描述为“只有 Chat 接口”，也不能把 HTTP 成功或普通文字回答当成编码 Agent 验收。依据：[Chat 处理](https://github.com/basketikun/chatgpt2api/blob/e55aef2829e7bf1d7256d6ff3feb4b40b02743d2/services/protocol/openai_v1_chat_complete.py)、[Responses 处理](https://github.com/basketikun/chatgpt2api/blob/e55aef2829e7bf1d7256d6ff3feb4b40b02743d2/services/protocol/openai_v1_response.py)。本轮未连接服务器确认运行容器 revision，源码结论结合现有业务约束使用。
+
+### 实现选择
+
+- Worker 快照新增可选 modelProtocols（模型 → 受支持协议列表）。目录与账户授权分组、该分组 Key 的 `/v1/models` 取交集；公开价目表请求不带 Cookie 或 Key。不对未知协议默认写 Responses。
+- Worker 对 gpt-web 给出原因，不创建编码用专用 Key；桌面也拦截旧快照中的 gpt-web。仅有被跳过分组的账户仍可保存账户概况，显示 0 配置和跳过原因。
+- 旧快照没有 modelProtocols 时，不猜测协议、不生成新配置；需使用更新后的 Worker 重新授权。此前关于 overview 的兼容规则仍有效。
+- 一个分组可为支持多协议的客户端生成多个条目，每个条目只包含该协议的模型，避免把混合目录发送到错误接口。文本模型筛选排除图像、音频、embedding、rerank 等；未知模型不自动作为编码模型。
+- 单一配置应用保持原稳定 ID；新增多协议应用的 ID 包含账户、分组、应用和协议。重复同步仅刷新 Key；精确匹配未修改的旧 Claude/Codex 自动模板时修正协议元数据，已编辑配置保留并提示核对。
+- 新导入只保存本地供应商库，不写用户 CLI 当前配置、不自动启动路由、不自动切换默认模型。启用仍使用原项目按钮和写入器。
+
+| 应用 | 自动导入规则 |
+| --- | --- |
+| Claude Code | 优先 Messages；其他已声明协议通过原路由转换 |
+| Claude Desktop | 原有本地路由模式及安全 Claude 模型路由映射 |
+| Codex | 客户端始终 Responses；上游 Chat / Messages 以 apiFormat 标记供原路由转换 |
+| Gemini CLI | 必须有 Gemini 模型及 Gemini 原生协议声明；Chat-only 不导入 |
+| Grok Build | 必须有 Grok 模型及可转换协议；写 Grok 原生 TOML，context_window 沿用上游默认值，不声称是实测模型上限 |
+| OpenCode | 按协议选择现有 AI SDK provider，每协议独立模型目录 |
+| OpenClaw / Pi | 使用原生 api 字段，每协议独立模型目录 |
+| Hermes | Chat / Messages / Responses 的原生 api_mode，不导入 Gemini 原生协议 |
+| MCode（侧栏 MiniMax） | Chat / Messages / Responses 的原生 api，每协议独立模型目录 |
+
+### 未验证状态
+
+- 协议配置可生成不等于模型工具调用、流式返回或多轮工具结果均已验收。除已知 gpt-web 限制，其余条目使用服务声明作为候选配置，备注明确真实任务待验证。
+- 生产桌面授权仍返回 404，尚未发布 Worker，也未用真实 Key 发起付费模型请求。不能宣称已经给当前真实账户完成各应用可用性配置。
+- 当前已启动本地测试 App 是本轮协议改动前的二进制；本轮提交源码不自动替换安装包。
+
+### 本轮验证结果
+
+- 桌面 release 定向测试 11 项通过：协议转换触发、混合目录分离、Gemini/Grok 限制、旧模板迁移与用户编辑保留、各原生客户端 Key 刷新、协议快照校验及仅有网页分组的账户登录。
+- 最后补验用户自定义 TOML 无 model 字段时不崩溃；以临时 Cargo package opt-level=0 / codegen-units=16 参数重跑上述 11 项全部通过，未修改项目编译配置。
+- 最终生产配置下 `cargo check --release --locked` 与两份修改 Rust 文件的格式检查通过。
+- 原项目未改动的 Responses → Chat 请求转换 103 项、Chat → Responses 流式转换 30 项测试通过，覆盖函数工具调用参数、工具结果与流式事件；测试均为虚构数据，不代表上游模型真实任务通过。
+- 网关工作区测试 63 项通过；从独立已提交源码 1b74f25 复查 62 项通过（未混入用户既有 start-page.ts / worker.test.ts 修改），TypeScript 与 Wrangler dry-run 通过。未执行生产发布。
+- HappyAPIWeb 根 TypeScript 检查与 Next 构建通过；本轮不改官网页面。
+
 ## fork 更新边界
 
 - 桌面产品名为 HappySwitch，应用标识为 `cn.happytoken.happyswitch`；本地供应商库沿用 CC Switch 兼容格式。
