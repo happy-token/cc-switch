@@ -263,7 +263,7 @@ export function HappyTokenLoginButton({
               })
             : t("happyToken.overviewUnavailable")}
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-4 grid grid-cols-1 gap-2">
           <Button
             variant="solid"
             size="regular"
