@@ -297,6 +297,10 @@ describe("App integration with MSW", () => {
         "claude-1",
       ),
     );
+    expect(sidebarApp("happyToken.login")).toBeInTheDocument();
+    expect(document.querySelector("main")?.textContent).not.toContain(
+      "happyToken.login",
+    );
 
     // 面板只盖住内容区，侧栏还能点：切应用时编辑面板必须关掉，否则 Claude 的
     // 供应商会以 appId=codex 保存进 Codex
@@ -308,7 +312,9 @@ describe("App integration with MSW", () => {
         "codex-1",
       ),
     );
-    expect(screen.queryByTestId("edit-provider-dialog")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("edit-provider-dialog"),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("usage"));
     expect(screen.getByTestId("usage-modal")).toBeInTheDocument();
@@ -316,6 +322,7 @@ describe("App integration with MSW", () => {
     await waitFor(() =>
       expect(screen.queryByTestId("usage-modal")).not.toBeInTheDocument(),
     );
+    expect(sidebarApp("happyToken.login")).toBeInTheDocument();
 
     fireEvent.click(sidebarApp("Codex"));
     await waitFor(() =>

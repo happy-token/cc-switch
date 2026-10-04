@@ -40,6 +40,7 @@ import { DRAG_REGION_ATTR, DRAG_REGION_STYLE, isMac } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import ccswitchLogo from "@/assets/icons/logo.svg";
 import { APP_DISPLAY_NAME, AppGlyph } from "./AppGlyph";
+import { HappyTokenLoginButton } from "@/components/HappyTokenLoginButton";
 
 const NO_DRAG = { WebkitAppRegion: "no-drag" } as React.CSSProperties;
 
@@ -94,6 +95,9 @@ export function Sidebar(props: SidebarProps) {
       ) : (
         <MainDirectory {...props} collapsed={collapsed} />
       )}
+      <div className="shrink-0 border-t border-border p-2">
+        <HappyTokenLoginButton collapsed={collapsed} />
+      </div>
     </nav>
   );
 }

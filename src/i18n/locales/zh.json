@@ -4548,7 +4548,7 @@
   },
   "happyToken": {
     "login": "登录 HappyToken",
-    "sync": "同步 HappyToken",
+    "sync": "同步配置",
     "syncing": "正在同步分组…",
     "help": "登录后自动导入账户全部可用编程模型分组；选择分组即可启用",
     "account": "当前账户：{{account}}。点击重新登录并同步分组。",
@@ -4560,6 +4560,15 @@
     "waiting": "等待浏览器授权，最多等待 10 分钟。",
     "reopen": "重新打开浏览器",
     "cancel": "取消登录",
-    "cancelFailed": "取消失败，请重试"
+    "cancelFailed": "取消失败，请重试",
+    "accountMenu": "账户：{{account}}",
+    "balance": "余额",
+    "consumed": "累计消费",
+    "recharge": "充值",
+    "console": "控制台",
+    "updatedAt": "最近同步：{{time}}。同步配置可更新账户数据。",
+    "overviewUnavailable": "账户金额暂不可用，请到控制台查看。",
+    "linkFailed": "无法打开浏览器，请重试",
+    "accountLoadFailed": "无法读取已同步账户，请重新登录"
   }
 }

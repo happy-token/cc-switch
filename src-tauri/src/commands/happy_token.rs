@@ -20,9 +20,36 @@ const GATEWAY: &str = "https://gateway.happy-token.cn";
 #[serde(rename_all = "camelCase")]
 struct SyncResult {
     account: String,
+    overview: Option<AccountOverview>,
     groups: Vec<String>,
     providers: usize,
     warnings: Vec<String>,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountOverview {
+    balance: f64,
+    consumed: f64,
+    symbol: String,
+    updated_at: u64,
+}
+#[derive(Serialize, Deserialize)]
+pub struct AccountSummary {
+    account: String,
+    overview: Option<AccountOverview>,
+}
+const ACCOUNT_SETTING: &str = "happy_token_account";
+
+#[tauri::command]
+pub fn happy_token_account(
+    state: tauri::State<'_, AppState>,
+) -> Result<Option<AccountSummary>, String> {
+    state
+        .db
+        .get_setting(ACCOUNT_SETTING)
+        .map_err(|_| "无法读取 HappyToken 账户")?
+        .map(|value| serde_json::from_str(&value).map_err(|_| "HappyToken 账户记录无效".into()))
+        .transpose()
 }
 #[derive(Deserialize)]
 struct BrowserGrant {
@@ -45,6 +72,8 @@ struct GroupSnapshot {
 struct Snapshot {
     uid: u64,
     account: String,
+    #[serde(default)]
+    overview: Option<AccountOverview>,
     groups: Vec<GroupSnapshot>,
     warnings: Vec<String>,
 }
@@ -219,12 +248,27 @@ async fn poll_login(
 }
 fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
     if snapshot.uid == 0
+        || snapshot.account.is_empty()
         || snapshot.account.len() > 1024
+        || snapshot.account.chars().any(char::is_control)
         || snapshot.groups.is_empty()
         || snapshot.groups.len() > 32
         || snapshot.warnings.len() > 32
     {
         return Err("授权配置无效".into());
+    }
+    if let Some(overview) = &snapshot.overview {
+        if !overview.balance.is_finite()
+            || !overview.consumed.is_finite()
+            || overview.consumed < 0.0
+            || overview.symbol.is_empty()
+            || overview.symbol.len() > 32
+            || overview.symbol.chars().any(char::is_control)
+            || overview.updated_at == 0
+            || overview.updated_at > 8_640_000_000_000_000
+        {
+            return Err("账户概况无效".into());
+        }
     }
     let mut names = std::collections::HashSet::new();
     for group in &snapshot.groups {
@@ -251,6 +295,7 @@ fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
 async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<SyncResult, String> {
     let mut result = SyncResult {
         account: snapshot.account,
+        overview: snapshot.overview,
         groups: Vec::new(),
         providers: 0,
         warnings: snapshot.warnings,
@@ -309,6 +354,17 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
     if result.providers == 0 {
         return Err(format!("未导入任何配置。{}", result.warnings.join("；")));
     }
+    let summary = AccountSummary {
+        account: result.account.clone(),
+        overview: result.overview.clone(),
+    };
+    app.state::<AppState>()
+        .db
+        .set_setting(
+            ACCOUNT_SETTING,
+            &serde_json::to_string(&summary).map_err(|_| "账户概况格式无效")?,
+        )
+        .map_err(|_| "无法保存 HappyToken 账户概况")?;
     Ok(result)
 }
 
@@ -470,6 +526,7 @@ mod tests {
         let mut snapshot = Snapshot {
             uid: 42,
             account: "Test".into(),
+            overview: None,
             groups: vec![GroupSnapshot {
                 name: "default".into(),
                 key: "sk-test".into(),

@@ -255,6 +255,7 @@ export const handlers = [
   http.post(`${TAURI_ENDPOINT}/restart_app`, () => success(true)),
 
   http.post(`${TAURI_ENDPOINT}/get_settings`, () => success(getSettings())),
+  http.post(`${TAURI_ENDPOINT}/happy_token_account`, () => success(null)),
 
   http.post(`${TAURI_ENDPOINT}/check_env_conflicts`, () => success([])),
 

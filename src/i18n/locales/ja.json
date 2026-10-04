@@ -4548,7 +4548,7 @@
   },
   "happyToken": {
     "login": "Sign in to HappyToken",
-    "sync": "Sync HappyToken",
+    "sync": "設定を同期",
     "syncing": "Syncing groups…",
     "help": "Sign in to import all available coding model groups, then select a group to activate it.",
     "account": "Account: {{account}}. Sign in again to sync groups.",
@@ -4560,6 +4560,15 @@
     "waiting": "ブラウザー認証を待っています（最大10分）。",
     "reopen": "ブラウザーを再度開く",
     "cancel": "ログインを中止",
-    "cancelFailed": "中止できません。再試行してください。"
+    "cancelFailed": "中止できません。再試行してください。",
+    "accountMenu": "アカウント：{{account}}",
+    "balance": "残高",
+    "consumed": "累計消費",
+    "recharge": "チャージ",
+    "console": "コンソール",
+    "updatedAt": "最終同期：{{time}}。設定の同期でアカウント情報を更新できます。",
+    "overviewUnavailable": "金額を取得できません。コンソールで確認してください。",
+    "linkFailed": "ブラウザーを開けません。再試行してください。",
+    "accountLoadFailed": "保存されたアカウントを読み込めません。再度ログインしてください。"
   }
 }
