@@ -7,7 +7,9 @@
 - 用户提及 Default、Pro、GPT Web；不硬编码分组名，不把未授权分组当作可用分组。
 - 复用 HappyImage / HappyServices 的账户体系，不创建另一套账户密码。
 - 维护根 `CONTEXT.md` 和本说明，减少后续重复沟通。
-- 当前授权为修改项目仓库；生产部署、Casdoor 应用设置、网关服务配置不在范围内。
+- 用户要求直接提交到 happy-token/main，不使用 PR，也不向官方上游提交 PR。此前 draft PR 仅创建在 happy-token fork 内，正在关闭。
+- 用户授权 macOS 本机签名与公证复用上级 config 的 HappyRouter 凭证；不将真实凭证复制到项目或提交到 Git。
+- 当前授权为修改项目仓库及本机签名打包；生产部署、Casdoor 应用设置、网关服务配置不在范围内。
 
 ## 已查明的依据（2026-10-04）
 
@@ -58,3 +60,13 @@
 - 最后一轮编译曾因磁盘空间不足失败；使用 `cargo clean -p cc-switch` 清理本项目构建缓存后，以关闭增量缓存的方式重跑 Rust 测试成功。
 - 未输入真实账户凭证，尚未实测真实账户令牌同步、各分组模型调用、Windows/Linux 窗口行为；不将模拟测试或登录页可达视为这些链路通过。
 - API key 与会话相关测试仅使用虚构数据。
+
+## macOS 签名与公证（2026-10-04）
+
+- 凭证源为 `../config/env/env.shared`；只记录变量名，不记录值。
+- 使用 Keychain 已安装的 Developer ID Application 证书。
+- 将 `CSC_NAME` 映射为构建进程的 `APPLE_SIGNING_IDENTITY`，将 `HAPPYROUTER` 映射为 `APPLE_PASSWORD`，同时使用 `APPLE_ID` 与 `APPLE_TEAM_ID`。
+- Apple Developer ID 签名/公证凭证与 Tauri 自动更新签名密钥是不同用途；本次复用前者，自动更新仍保持关闭。
+- 构建命令为 `pnpm tauri build --bundles app,dmg`，仅生成本机包，不自动发布 GitHub Release。
+- 依据：[Tauri macOS 签名文档](https://v2.tauri.app/distribute/sign/macos/)、上级 config 的 macOS 发布说明。
+- 当前签名、公证与 Gatekeeper 检查结果待本轮构建完成后更新。
