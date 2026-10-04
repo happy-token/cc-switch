@@ -4573,6 +4573,8 @@
     "updatedAt": "最近同步：{{time}}。同步設定可更新帳戶資料。",
     "overviewUnavailable": "帳戶金額暫不可用，請到控制台查看。",
     "linkFailed": "無法開啟瀏覽器，請重試",
-    "accountLoadFailed": "無法讀取已同步帳戶，請重新登入"
+    "accountLoadFailed": "無法讀取已同步帳戶，請重新登入",
+    "settings": "帳戶設定",
+    "settingsHelp": "管理帳戶餘額、設定同步和登入狀態。"
   }
 }

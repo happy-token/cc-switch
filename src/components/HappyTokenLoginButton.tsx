@@ -2,7 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronUp, Loader2, UserRound } from "lucide-react";
+import {
+  ChevronUp,
+  Loader2,
+  UserRound,
+  ExternalLink,
+  RefreshCw,
+  LogOut,
+  ShieldCheck,
+  Plus,
+  Settings,
+  X,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -80,6 +91,7 @@ export function HappyTokenLoginButton({
   const [status, setStatus] = useState<"idle" | "login" | "syncing">("idle");
   const [summary, setSummary] = useState<AccountSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const synced = useRef(false);
   const loggedOut = useRef(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -138,6 +150,7 @@ export function HappyTokenLoginButton({
       synced.current = true;
       setSummary(null);
       setMenuOpen(false);
+      setAccountSettingsOpen(false);
       setStatus("idle");
       setCode("");
       toast.success(t("happyToken.loggedOut"));
@@ -151,6 +164,7 @@ export function HappyTokenLoginButton({
   const login = async () => {
     loggedOut.current = false;
     setMenuOpen(false);
+    setAccountSettingsOpen(false);
     setStatus("login");
     setOpening(true);
     try {
@@ -180,7 +194,7 @@ export function HappyTokenLoginButton({
   const amount = (value: number) =>
     `${overview?.symbol}${new Intl.NumberFormat(undefined, {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
+      maximumFractionDigits: 2,
     }).format(value)}`;
   const label =
     status === "syncing"
@@ -219,6 +233,85 @@ export function HappyTokenLoginButton({
     }
   };
 
+  const accountDetails = (
+    <>
+      <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-subtle text-fg-2">
+          <UserRound className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-caption text-fg-3">HappyToken</p>
+          <p className="break-words font-medium text-fg-1">{account}</p>
+        </div>
+      </div>
+      <div className="px-5 py-4">
+        <dl>
+          <div>
+            <dt className="text-caption text-fg-2">
+              {t("happyToken.balance")}
+            </dt>
+            <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+              {overview ? amount(overview.balance) : "—"}
+            </dd>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3 text-caption">
+            <dt className="text-fg-2">{t("happyToken.consumed")}</dt>
+            <dd className="tabular-nums text-fg-1">
+              {overview ? amount(overview.consumed) : "—"}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-3 whitespace-normal text-caption leading-relaxed text-fg-3">
+          {overview
+            ? t("happyToken.updatedAt", {
+                time: new Date(overview.updatedAt).toLocaleString(),
+              })
+            : t("happyToken.overviewUnavailable")}
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Button
+            variant="solid"
+            size="regular"
+            onClick={() => void openAccountPage("/wallet")}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t("happyToken.recharge")}
+          </Button>
+          <Button
+            variant="outline"
+            size="regular"
+            onClick={() => void openAccountPage("/dashboard")}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            {t("happyToken.console")}
+          </Button>
+        </div>
+      </div>
+      <div className="border-t border-border p-2">
+        <Button
+          variant="quiet"
+          size="regular"
+          className="w-full justify-start"
+          disabled={status !== "idle" || opening || loggingOut}
+          onClick={() => void login()}
+        >
+          <RefreshCw className="h-4 w-4 text-fg-2" />
+          {t("happyToken.sync")}
+        </Button>
+        <Button
+          variant="quiet"
+          size="regular"
+          className="w-full justify-start"
+          disabled={status !== "idle" || opening || loggingOut}
+          onClick={() => void logout()}
+        >
+          <LogOut className="h-4 w-4 text-fg-2" />
+          {t("happyToken.logout")}
+        </Button>
+      </div>
+    </>
+  );
+
   return (
     <>
       {account ? (
@@ -228,74 +321,48 @@ export function HappyTokenLoginButton({
             side="top"
             align="start"
             sideOffset={8}
-            className="w-64 max-w-[calc(100vw-16px)] p-3"
+            className="w-72 max-w-[calc(100vw-16px)] overflow-hidden p-0"
             aria-label={t("happyToken.accountMenu", { account })}
           >
-            <p className="mb-3 break-words whitespace-normal font-medium">
-              {account}
-            </p>
-            <dl className="space-y-2 text-body">
-              <div className="flex justify-between gap-3">
-                <dt className="text-fg-2">{t("happyToken.balance")}</dt>
-                <dd className="tabular-nums">
-                  {overview ? amount(overview.balance) : "—"}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-fg-2">{t("happyToken.consumed")}</dt>
-                <dd className="tabular-nums">
-                  {overview ? amount(overview.consumed) : "—"}
-                </dd>
-              </div>
-            </dl>
-            <p className="my-3 whitespace-normal text-caption text-fg-3">
-              {overview
-                ? t("happyToken.updatedAt", {
-                    time: new Date(overview.updatedAt).toLocaleString(),
-                  })
-                : t("happyToken.overviewUnavailable")}
-            </p>
-            <div className="flex gap-2">
+            {accountDetails}
+            <div className="border-t border-border p-2">
               <Button
-                variant="outline"
-                size="compact"
-                className="flex-1"
-                onClick={() => void openAccountPage("/wallet")}
+                variant="quiet"
+                className="w-full justify-start"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setAccountSettingsOpen(true);
+                }}
               >
-                {t("happyToken.recharge")}
-              </Button>
-              <Button
-                variant="outline"
-                size="compact"
-                className="flex-1"
-                onClick={() => void openAccountPage("/dashboard")}
-              >
-                {t("happyToken.console")}
+                <Settings className="h-4 w-4 text-fg-2" />
+                {t("happyToken.settings")}
               </Button>
             </div>
-            <Button
-              variant="quiet"
-              size="compact"
-              className="mt-2 w-full"
-              disabled={status !== "idle" || opening || loggingOut}
-              onClick={() => void login()}
-            >
-              {t("happyToken.sync")}
-            </Button>
-            <Button
-              variant="quiet"
-              size="compact"
-              className="w-full"
-              disabled={status !== "idle" || opening || loggingOut}
-              onClick={() => void logout()}
-            >
-              {t("happyToken.logout")}
-            </Button>
           </PopoverContent>
         </Popover>
       ) : (
         trigger
       )}
+      <Dialog open={accountSettingsOpen} onOpenChange={setAccountSettingsOpen}>
+        <DialogContent className="max-w-[min(28rem,calc(100vw-2rem))] gap-0 overflow-y-auto p-0">
+          <Button
+            variant="quiet"
+            size="icon"
+            className="absolute right-3 top-3"
+            aria-label={t("common.close")}
+            onClick={() => setAccountSettingsOpen(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <DialogHeader className="px-5 pt-6 pb-4 pr-12">
+            <DialogTitle>{t("happyToken.settings")}</DialogTitle>
+            <DialogDescription>
+              {t("happyToken.settingsHelp")}
+            </DialogDescription>
+          </DialogHeader>
+          {accountDetails}
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={status !== "idle" && !!code}
         onOpenChange={(open) => {
@@ -303,6 +370,7 @@ export function HappyTokenLoginButton({
         }}
       >
         <DialogContent
+          className="max-w-md gap-5 p-7"
           onInteractOutside={(event) => {
             if (status === "syncing") event.preventDefault();
           }}
@@ -310,26 +378,38 @@ export function HappyTokenLoginButton({
             if (status === "syncing") event.preventDefault();
           }}
         >
-          <DialogHeader>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-subtle">
+            <ShieldCheck className="h-6 w-6 text-fg-1" />
+          </div>
+          <DialogHeader className="p-0">
             <DialogTitle>{t("happyToken.browserTitle")}</DialogTitle>
             <DialogDescription>{t("happyToken.browserHelp")}</DialogDescription>
           </DialogHeader>
+          <div className="rounded-panel border border-border bg-subtle px-4 py-5 text-center">
+            <p className="mb-3 text-caption text-fg-2">
+              {t("happyToken.code")}
+            </p>
+            <p
+              className="font-mono text-3xl tracking-[0.22em] text-fg-1"
+              aria-label={t("happyToken.code")}
+            >
+              {code}
+            </p>
+          </div>
           <p
-            className="text-center font-mono text-3xl tracking-widest py-4"
-            aria-label={t("happyToken.code")}
+            className="flex items-center gap-2 text-caption text-fg-2"
+            role="status"
           >
-            {code}
-          </p>
-          <p className="text-sm text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
             {t(
               status === "syncing"
                 ? "happyToken.syncing"
                 : "happyToken.waiting",
             )}
           </p>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
             <Button
-              variant="outline"
+              variant="solid"
               disabled={status === "syncing" || opening || loggingOut}
               onClick={() => void login()}
             >

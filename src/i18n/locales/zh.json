@@ -4572,6 +4572,8 @@
     "updatedAt": "最近同步：{{time}}。同步配置可更新账户数据。",
     "overviewUnavailable": "账户金额暂不可用，请到控制台查看。",
     "linkFailed": "无法打开浏览器，请重试",
-    "accountLoadFailed": "无法读取已同步账户，请重新登录"
+    "accountLoadFailed": "无法读取已同步账户，请重新登录",
+    "settings": "账户设置",
+    "settingsHelp": "管理账户余额、配置同步和登录状态。"
   }
 }
