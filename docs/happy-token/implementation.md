@@ -70,9 +70,9 @@
 - 构建命令为 `pnpm tauri build --bundles app,dmg`，仅生成本机包，不自动发布 GitHub Release。
 - 依据：[Tauri macOS 签名文档](https://v2.tauri.app/distribute/sign/macos/)、上级 config 的 macOS 发布说明。
 - arm64 Release 编译完成，`HappySwitch.app` 的 `codesign --verify --deep --strict` 验证通过。
-- Apple 公证返回 HTTP 403：开发者团队有未签署或已过期的协议；需要账户持有人在 Apple Developer 账户处理协议后再重试公证。构建凭证未写入仓库。
+- 首次 Apple 公证曾返回协议 HTTP 403；账户协议处理后已解除，最终公证通过。构建凭证未写入仓库。
 - 由于公证阶段中断 Tauri 打包，使用 `hdiutil` 生成本机 DMG 并以同一 Developer ID 签名；产物位于 `src-tauri/target/release/bundle/dmg/HappySwitch_3.20.4_aarch64.dmg`。
-- DMG 的 `codesign --verify` 与 `hdiutil verify` 均通过；`stapler validate` 确认应用无公证票据，`spctl --assess` 返回 `Unnotarized Developer ID`。当前不能通过 Gatekeeper 分发检查；本次没有发布 GitHub Release。
+- DMG 签名与磁盘校验通过；最终 Apple 公证为 Accepted，DMG 票据装订及 `stapler validate` 通过，应用票据装订通过，`spctl --assess` 返回 accepted / Notarized Developer ID。没有发布 GitHub Release。
 
 ### 认证方式复核
 
@@ -85,3 +85,10 @@
 
 - 用户确认已同意协议。使用原 HappyRouter 凭证重查 `notarytool history` 并直接提交已签名 DMG，两次均仍返回同一协议 HTTP 403，尚未获得公证提交 ID。
 - 已同意协议是用户确认；Apple 公证服务当前仍拒绝请求是实测事实。是否存在状态同步延迟、其他待签协议或团队账户资格问题，尚未确认；不据此断言用户未签署协议。
+
+### 最终公证结果（2026-10-04）
+
+- Chrome 中核实登录账户与构建账户一致，团队 BL67GP4S58，会员有效至 2027-04-21，Developer Program 协议已接受。App Store Connect 曾出现独立 Terms of Service 待同意弹窗；未代用户接受。随后页面无弹窗，Free Apps Agreement 显示 Active。
+- 复查 `notarytool history` 成功，协议 403 已解除；不能仅凭前后状态确定具体是哪份协议导致原错误。
+- 提交现有 arm64 DMG，Apple 返回 Accepted，提交 ID 为 `76163a49-b9ec-4282-85ee-e974ff2753de`。
+- DMG 与本地 .app 的公证票据均已装订；DMG 票据验证通过，本地 .app 的签名验证与 Gatekeeper 检查通过。

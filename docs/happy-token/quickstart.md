@@ -42,4 +42,4 @@ pnpm tauri build --debug --bundles app
 
 代码直接提交至 `happy-token/main`；不创建 PR、不向官方上游提交 PR。本机签名打包不会自动创建 GitHub Release。
 
-本轮 Release 应用已通过 Developer ID 签名验证，但 Apple 公证返回 403（团队协议未签署或已过期）。本机 DMG 已签名，尚未公证。账户持有人应在 [Apple Developer 账户](https://developer.apple.com/account/) 完成协议处理，再重新公证和装订票据；当前产物不能视为通过 Gatekeeper 的正式分发包。
+本轮 arm64 Release 已完成 Developer ID 签名、Apple 公证和票据装订，DMG 票据验证及应用 Gatekeeper 检查通过。产物为 `src-tauri/target/release/bundle/dmg/HappySwitch_3.20.4_aarch64.dmg`。此前协议 403 已解除；没有自动发布 GitHub Release。
