@@ -62,12 +62,74 @@ fn config_hash(value: &Value) -> String {
     format!("{:x}", Sha256::digest(value.to_string().as_bytes()))
 }
 
-fn provider_hash(provider: &crate::provider::Provider) -> String {
-    config_hash(
-        &json!({"settings": provider.settings_config, "meta": provider.meta,
+fn fingerprint_value(provider: &crate::provider::Provider) -> Value {
+    let mut value = json!({"settings": provider.settings_config, "meta": provider.meta,
         "name": provider.name, "notes": provider.notes, "category": provider.category,
-        "website": provider.website_url, "icon": provider.icon, "iconColor": provider.icon_color}),
+        "website": provider.website_url, "icon": provider.icon, "iconColor": provider.icon_color});
+    // This flag is maintained by the original app when it discovers live configuration.
+    if value["meta"]["liveConfigManaged"] == false {
+        if let Some(meta) = value["meta"].as_object_mut() {
+            meta.remove("liveConfigManaged");
+        }
+    }
+    value
+}
+fn canonical(value: &Value) -> Value {
+    match value {
+        Value::Object(object) => {
+            let mut fields: Vec<_> = object.iter().collect();
+            fields.sort_by(|a, b| a.0.cmp(b.0));
+            Value::Object(
+                fields
+                    .into_iter()
+                    .map(|(k, v)| (k.clone(), canonical(v)))
+                    .collect(),
+            )
+        }
+        Value::Array(values) => Value::Array(values.iter().map(canonical).collect()),
+        value => value.clone(),
+    }
+}
+fn provider_hash(provider: &crate::provider::Provider) -> String {
+    format!(
+        "v2:{}",
+        config_hash(&canonical(&fingerprint_value(provider)))
     )
+}
+fn matches_managed(entry: &ManagedConfig, provider: &crate::provider::Provider) -> bool {
+    if entry.hash == provider_hash(provider) {
+        return true;
+    }
+    if entry.hash.starts_with("v2:") {
+        return false;
+    }
+    let mut value = fingerprint_value(provider);
+    if entry.hash == config_hash(&value) {
+        return true;
+    }
+    // v1 serialized the three generated Desktop routes in HashMap iteration order.
+    // Accept the six historical orders without changing any field or route content.
+    let routes = value["meta"]["claudeDesktopModelRoutes"]
+        .as_object()
+        .cloned();
+    if let Some(routes) = routes.filter(|r| r.len() == 3) {
+        let fields: Vec<_> = routes.into_iter().collect();
+        for order in [
+            [0, 1, 2],
+            [0, 2, 1],
+            [1, 0, 2],
+            [1, 2, 0],
+            [2, 0, 1],
+            [2, 1, 0],
+        ] {
+            value["meta"]["claudeDesktopModelRoutes"] =
+                Value::Object(order.into_iter().map(|i| fields[i].clone()).collect());
+            if entry.hash == config_hash(&value) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 fn is_stale(
@@ -77,7 +139,8 @@ fn is_stale(
     authorized: Option<&[String]>,
 ) -> bool {
     !current.contains(&entry.id)
-        && (refreshed.contains(&entry.group)
+        && (providers::excluded_group(&entry.group)
+            || refreshed.contains(&entry.group)
             || authorized.is_some_and(|groups| !groups.contains(&entry.group)))
 }
 
@@ -375,7 +438,12 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
         .map(|v| serde_json::from_str(&v).map_err(|_| "自动配置记录无效"))
         .transpose()?
         .unwrap_or_default();
-    let refreshed: Vec<String> = snapshot.groups.iter().map(|g| g.name.clone()).collect();
+    let refreshed: Vec<String> = snapshot
+        .groups
+        .iter()
+        .filter(|g| g.models.is_empty() || !g.model_protocols.is_empty())
+        .map(|g| g.name.clone())
+        .collect();
     let mut current_ids = std::collections::HashSet::new();
     let mut result = SyncResult {
         account: snapshot.account,
@@ -385,6 +453,12 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
         warnings: snapshot.warnings,
     };
     for group in snapshot.groups {
+        if group.name == "image" {
+            result
+                .warnings
+                .push("image：按账户配置范围排除，不导入编程助手".into());
+            continue;
+        }
         let providers = providers::build_providers(snapshot.uid, &group);
         if providers.is_empty() {
             result.warnings.push(format!(
@@ -422,7 +496,7 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
                 .get_provider_by_id(&provider.id, app_type)
                 .map_err(|_| "无法读取自动配置")?
             {
-                if previous.is_some_and(|m| m.hash == provider_hash(&existing)) {
+                if previous.is_some_and(|m| matches_managed(m, &existing)) {
                     let mut updated = existing;
                     updated.settings_config = provider.settings_config.clone();
                     updated.meta = provider.meta.clone();
@@ -529,15 +603,20 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
             {
                 // Additive applications may already have written this provider to live files.
                 let active = existing.in_failover_queue
-                    || app_type.is_additive_mode()
-                    || app_type == crate::app_config::AppType::Pi
+                    || existing
+                        .meta
+                        .as_ref()
+                        .is_some_and(|m| m.live_config_managed == Some(true))
+                    || ((app_type.is_additive_mode()
+                        || app_type == crate::app_config::AppType::Pi)
+                        && entry.group != "image")
                     || state
                         .db
                         .get_current_provider(&entry.app)
                         .map_err(|_| "无法读取当前配置")?
                         .as_deref()
                         == Some(&entry.id);
-                if !active && entry.hash == provider_hash(&existing) {
+                if !active && matches_managed(&entry, &existing) {
                     crate::services::ProviderService::delete(state.inner(), app_type, &entry.id)
                         .map_err(|_| "无法清理旧自动配置")?;
                     continue;
@@ -634,6 +713,40 @@ fn refresh_key(existing: &mut Value, generated: &Value, app_type: &str) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fingerprints_ignore_map_order_and_internal_false_flag_but_preserve_user_edits() {
+        let a = json!({"a": {"x": 1, "y": 2}, "b": 3});
+        let b = json!({"b": 3, "a": {"y": 2, "x": 1}});
+        assert_eq!(config_hash(&canonical(&a)), config_hash(&canonical(&b)));
+        let group = GroupSnapshot {
+            name: "default".into(),
+            key: "sk-fixture-only".into(),
+            models: vec!["gpt-5".into()],
+            model_protocols: std::collections::HashMap::from([(
+                "gpt-5".into(),
+                vec![Protocol::Chat],
+            )]),
+        };
+        let mut p = providers::build_providers(42, &group)
+            .into_iter()
+            .find(|(app, _)| *app == "claude-desktop")
+            .unwrap()
+            .1;
+        let entry = ManagedConfig {
+            group: group.name,
+            app: "claude-desktop".into(),
+            id: p.id.clone(),
+            hash: config_hash(&fingerprint_value(&p)),
+        };
+        assert!(matches_managed(&entry, &p));
+        let hash = provider_hash(&p);
+        p.meta.as_mut().unwrap().live_config_managed = Some(false);
+        assert_eq!(hash, provider_hash(&p));
+        assert!(matches_managed(&entry, &p));
+        p.name = "User customized".into();
+        assert!(!matches_managed(&entry, &p));
+    }
 
     #[test]
     fn reconciliation_requires_authoritative_absence_or_a_successful_refresh() {

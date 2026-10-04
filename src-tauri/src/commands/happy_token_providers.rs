@@ -133,10 +133,14 @@ fn provider(
     p
 }
 
+pub(super) fn excluded_group(name: &str) -> bool {
+    matches!(name, "image" | "gpt-web")
+}
+
 pub(super) fn build_providers(uid: u64, group: &GroupSnapshot) -> Vec<(&'static str, Provider)> {
     // The deployed ChatGPT2API source substitutes text for unsupported function tools.
     // A protocol bridge cannot repair that; also guard snapshots from older Workers.
-    if group.name == "gpt-web" {
+    if excluded_group(&group.name) {
         return vec![];
     }
     let mut result = Vec::new();
@@ -155,10 +159,9 @@ pub(super) fn build_providers(uid: u64, group: &GroupSnapshot) -> Vec<(&'static 
             let models: Vec<_> = available(group, protocol)
                 .into_iter()
                 .filter(|model| {
-                    // Gemini CLI and Grok Build cannot be treated as arbitrary model clients.
+                    // Gemini CLI requires its native model family; Grok supports custom models.
                     match app {
                         "gemini" => model.to_ascii_lowercase().starts_with("gemini-"),
-                        "grokbuild" => model.to_ascii_lowercase().starts_with("grok-"),
                         _ => true,
                     }
                 })
@@ -378,9 +381,7 @@ mod tests {
             &crate::app_config::AppType::Claude,
             find(&providers, "claude")
         ));
-        assert!(!providers
-            .iter()
-            .any(|(app, _)| matches!(*app, "gemini" | "grokbuild")));
+        assert!(!providers.iter().any(|(app, _)| *app == "gemini"));
         crate::claude_desktop_config::validate_provider(find(&providers, "claude-desktop"))
             .unwrap();
         assert_eq!(
@@ -424,6 +425,23 @@ mod tests {
         );
     }
     #[test]
+    fn grok_build_accepts_custom_models_with_declared_protocols() {
+        let providers = build_providers(42, &group("default", &[("qwen-coder", Protocol::Chat)]));
+        let grok = find(&providers, "grokbuild");
+        assert!(grok.settings_config["config"]
+            .as_str()
+            .unwrap()
+            .contains("qwen-coder"));
+        assert_eq!(
+            grok.meta.as_ref().unwrap().api_format.as_deref(),
+            Some("openai_chat")
+        );
+        assert!(crate::tray::provider_needs_routing(
+            &crate::app_config::AppType::GrokBuild,
+            grok
+        ));
+    }
+    #[test]
     fn mixed_protocol_catalogs_never_send_models_to_wrong_endpoint() {
         let g = group(
             "default",
@@ -463,6 +481,7 @@ mod tests {
     }
     #[test]
     fn web_only_unknown_and_non_text_models_do_not_produce_agent_configs() {
+        assert!(build_providers(42, &group("image", &[("gpt-5", Protocol::Responses)])).is_empty());
         assert!(build_providers(
             42,
             &group(
@@ -510,7 +529,7 @@ mod tests {
         assert_eq!(ids.len(), first.len());
     }
     #[test]
-    fn grok_build_requires_grok_models_and_writes_native_toml() {
+    fn grok_build_prefers_grok_models_and_writes_native_toml() {
         let providers = build_providers(42, &group("custom", &[("grok-4.5", Protocol::Responses)]));
         let grok = find(&providers, "grokbuild");
         crate::grok_config::validate_config_toml(grok.settings_config["config"].as_str().unwrap())

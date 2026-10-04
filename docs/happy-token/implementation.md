@@ -211,3 +211,35 @@
 退出登录清除 HappySwitch 本地账户概况并取消待授权请求；保留导入配置、已有分组 Key 和浏览器会话，不撤销网关令牌。账户写入与退出串行，避免晚到的授权结果恢复账户。更新配置是账户配置更新，应用软件更新继续使用上游功能。
 
 验证：前端全量单元测试 2112 项通过（账户组件 9 项），类型检查与 renderer 构建通过；网关类型检查、官网类型检查及构建、Worker dry-run 通过。Rust 定向测试 12 项与标准 release 类型检查通过；Worker 工作区 64 项、独立已提交版本 63 项测试通过，覆盖权威分组清单、零分组和旧配置识别。生产 Worker 尚未发布，真实账户整条授权/导入链路仍未通过；浏览器端口 18765 为示例数据 UI 预览，不能作为真实账户验证。
+
+
+## 生产授权发布验收（2026-10-04，进行中）
+
+用户在发布 72f9b8d 的明确询问后回复“继续”，本次授权仅包含 gateway-sso Worker 与真实账户测试。使用独立已提交副本部署，未混入 HappyAPIWeb 工作区其他修改。原版本 38344659-2d10-4fe7-a65a-6b671bda4699；新版本 a5ecde70-aaac-4150-9139-c1a6f4a6f97d。既有 SSO_FLOW_SECRET 存在，未读取或轮换其内容。线上无账户凭证的 start/pending/cancel/已取消兑换检查分别为 200/202/200/410。
+
+首次添加 Durable Object 类后，普通版本回滚可能受类生命周期限制；异常时应恢复旧 SSO 行为并保留新增类与存储，不删除 namespace。依据：[Cloudflare 回滚限制](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)。Chrome 既有真实网关会话有效；新版本地应用正在构建，真实账户授权与导入尚未宣布通过。
+
+
+### 真实账户首轮结果
+
+Chrome 实际授权页面已显示“授权完成”，本地原生应用收到 Root User 账户并成功同步 24 项：Claude Code、Claude Desktop、Codex、OpenCode、OpenClaw、Hermes、Pi、MiniMax Code 各 3 项，分别来自 default、gpt-pro、image。gpt-web 未创建编码令牌并显示不支持函数工具调用的原因；Gemini CLI / Grok Build 未找到符合协议和模型条件的配置，未强行导入。账户余额和累计消费与控制台按显示精度一致。仅授权、目录读取和配置同步已验收，不代表真实编码任务/工具调用验收。
+
+按用户最新要求，后续普通功能测试优先 Tauri dev / Vite 热更新，不重复完整打包。使用独立 CC_SWITCH_TEST_HOME 数据，renderer 18766；当前改用 release 依赖缓存加仅主包低优化参数运行 dev，避免新建完整 debug 依赖缓存。未修改 Cargo.toml 或默认 Tauri 配置；仅本地 dev 测试壳使用 ad-hoc 签名，无 Apple 证书签名、公证或 DMG 步骤。此前刚构建的签名测试副本保留在 Library 下，dev 运行实例需区分。
+
+
+### image 排除与 GPT Web 能力核对
+
+用户明确要求过滤 image，原生生成器与网关收集器均增加排除条件；网关收集器不为该组创建桌面专用 Key。原生还识别旧 Worker 快照，按管理记录清理未启用的自动 image 配置，不触及手动供应商与已启用配置。网关此排除改动尚未发布，生产仍是 72f9b8d；原生 dev 已过滤旧快照。
+
+真实 dev 更新发现旧指纹对 HashMap 序列化顺序、原应用自动维护的 liveConfigManaged=false 敏感；改为规范化字段顺序的 v2 指纹，兼容旧 Desktop 三个默认路由的六种字段顺序，并忽略该内部 false 标记。true 仍视为已写入外部配置，保留；其他配置值及用户自定义名称/备注照常比较。
+
+GPT Web 依据为本地 HappyServices/chatgpt2api/README.md 记录的线上后端 revision e55aef2829e7bf1d7256d6ff3feb4b40b02743d2：[Chat 处理源码](https://github.com/basketikun/chatgpt2api/blob/e55aef2829e7bf1d7256d6ff3feb4b40b02743d2/services/protocol/openai_v1_chat_complete.py)、[Responses 处理源码](https://github.com/basketikun/chatgpt2api/blob/e55aef2829e7bf1d7256d6ff3feb4b40b02743d2/services/protocol/openai_v1_response.py)。普通工具定义触发不支持本地工具的提示；源码包含 Responses 实现，但不能据此认定网关 gpt-web 渠道已开放该接口或能运行函数工具。未执行 gpt-web 付费模型调用，未部署或替换其后端；自动编程仍需结构化工具调用、结果回传和流式验收。
+
+
+## 标准协议落档与最新状态
+
+标准入口：[协议契约与可执行流程](protocol-contract.md)、[逐模型证据快照](model-protocol-inventory.json)。2026-10-04 使用真实 Default/Pro 分组 Key 只读获取 /v1/models，分别 41/24 项；GPT Web 11 项与 Image 31 项仅为公开 pricing 清单。真实 Key 只在内存用于固定网关目录请求，没有写入文档或输出。
+
+dev 完成更新、退出、重新授权；image 自动配置已全部清理，账户恢复与 16 项导入通过。Grok 自定义模型限制在本轮 review 中更正，新规则尚未在真实 dev 同步；模型调用及函数工具往返仍未验收。Pi 原生 api 与元数据归一化差异作为后续审查项记录，不能把该警告直接认定为用户设置错误。
+
+本轮协议审查后的 Rust 定向测试 14 项通过，覆盖 Grok 自定义模型、协议转换、image 排除、指纹归一化与用户配置保留；git diff --check 通过。

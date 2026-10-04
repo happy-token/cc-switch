@@ -1,0 +1,1159 @@
+{
+  "capturedAt": "2026-10-04T08:44:43.959898+00:00",
+  "evidence": "catalog + public pricing; no paid inference or tool test",
+  "groups": {
+    "default": {
+      "catalogVerified": true,
+      "models": [
+        {
+          "model": "Deepseek-V4-Flash",
+          "pricingProtocols": [],
+          "importProtocols": [],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "Deepseek-V4-Pro",
+          "pricingProtocols": [],
+          "importProtocols": [],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "GLM-5.2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "GLM-5.3",
+          "pricingProtocols": [],
+          "importProtocols": [],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "GLM-5.3-Flash",
+          "pricingProtocols": [],
+          "importProtocols": [],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "GLM-5V-Turbo",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "MiniMax-M2.5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "MiniMax-M2.7",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "MiniMax-M3",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "Qwen3.6-Flash",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "Qwen3.8-Max",
+          "pricingProtocols": [],
+          "importProtocols": [],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "claude-opus-4-6",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "claude-opus-4-7",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "claude-opus-4-8",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "claude-opus-4.6",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "claude-opus-4.7",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "claude-opus-5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "claude-sonnet-5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "deepseek-v4-flash",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "doubao-seed-2.1-pro",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "doubao-seed-2.1-turbo",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gemini-3-pro",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gemini-3.1-flash-lite",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gemini-3.1-pro-preview",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gemini-3.5-flash",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6-luna",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6-terra",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-6-astra",
+          "pricingProtocols": [],
+          "importProtocols": [],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "kimi-k2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "kimi-k2.5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "kimi-k2.6",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "kimi-k3",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "qwen3-flash",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "qwen3.6-plus",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "qwen3.7-max",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "qwen3.7-plus",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "qwen3.8-flash",
+          "pricingProtocols": [],
+          "importProtocols": [],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        }
+      ]
+    },
+    "gpt-pro": {
+      "catalogVerified": true,
+      "models": [
+        {
+          "model": "codex-gpt-image-2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "codex-gpt-image-2.5-flare",
+          "pricingProtocols": [],
+          "importProtocols": [],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "codex-gpt-image-2.5-sunburst",
+          "pricingProtocols": [],
+          "importProtocols": [],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-4o-audio-preview",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-4o-realtime-preview",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2-2025-12-11",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2-chat-latest",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2-pro",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2-pro-2025-12-11",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.3-codex",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.3-codex-spark",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.4",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.4-2026-03-05",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.4-mini",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6-luna",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6-terra",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-6",
+          "pricingProtocols": [],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-6-astra",
+          "pricingProtocols": [],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-6-luna",
+          "pricingProtocols": [],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-6-sol",
+          "pricingProtocols": [],
+          "importProtocols": [
+            "responses"
+          ],
+          "protocolSource": "service-policy:gpt-pro",
+          "toolCallingVerified": false
+        }
+      ]
+    },
+    "gpt-web": {
+      "catalogVerified": false,
+      "models": [
+        {
+          "model": "auto",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-1",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-3",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-3-mini",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-6",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-6-mini",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-mini",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-image-2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        }
+      ]
+    },
+    "image": {
+      "catalogVerified": false,
+      "models": [
+        {
+          "model": "auto",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "codex-gpt-image-2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-4o-audio-preview",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-4o-realtime-preview",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-1",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-3",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-3-mini",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-6",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-6-mini",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5-mini",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2-2025-12-11",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2-chat-latest",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2-pro",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.2-pro-2025-12-11",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.3-codex",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.3-codex-spark",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.4",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.4-2026-03-05",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.4-mini",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6-luna",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6-sol",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-5.6-terra",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-image-1",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-image-1.5",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        },
+        {
+          "model": "gpt-image-2",
+          "pricingProtocols": [
+            "chat"
+          ],
+          "importProtocols": [
+            "chat"
+          ],
+          "protocolSource": "public-pricing",
+          "toolCallingVerified": false
+        }
+      ]
+    }
+  }
+}
