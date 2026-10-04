@@ -243,3 +243,8 @@ GPT Web 依据为本地 HappyServices/chatgpt2api/README.md 记录的线上后�
 dev 完成更新、退出、重新授权；image 自动配置已全部清理，账户恢复与 16 项导入通过。Grok 自定义模型限制在本轮 review 中更正，新规则尚未在真实 dev 同步；模型调用及函数工具往返仍未验收。Pi 原生 api 与元数据归一化差异作为后续审查项记录，不能把该警告直接认定为用户设置错误。
 
 本轮协议审查后的 Rust 定向测试 14 项通过，覆盖 Grok 自定义模型、协议转换、image 排除、指纹归一化与用户配置保留；git diff --check 通过。
+
+
+### 同步提示精简
+
+前端显示边界合并 Default/Pro 路由提示并去重 Image，缩短 GPT Web、Gemini 和协议核对文案；未知错误原样保留。Pi 实际 api 与生成协议一致时不再提示核对，即使原写入器去掉 meta.apiFormat；确实不一致仍提示。仅修正警告比较，管理指纹的归一化差异仍需另行处理。本轮不改生产 Worker。

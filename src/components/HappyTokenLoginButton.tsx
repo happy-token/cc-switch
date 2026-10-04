@@ -36,6 +36,40 @@ interface SyncResult extends AccountSummary {
   warnings: string[];
 }
 
+// Older Workers still return verbose messages; normalize them at the display boundary.
+export function compactSyncWarnings(warnings: string[]): string {
+  const messages = new Set<string>();
+  const routed = new Set<string>();
+  for (const warning of warnings) {
+    const separator = warning.indexOf("：");
+    const group = separator < 0 ? "" : warning.slice(0, separator);
+    const detail = separator < 0 ? warning : warning.slice(separator + 1);
+    if (
+      group === "gpt-web" &&
+      detail.includes("不支持") &&
+      detail.includes("工具")
+    ) {
+      messages.add("GPT Web 暂不支持编程助手");
+    } else if (group === "image" && detail.includes("排除")) {
+      messages.add("已跳过 Image");
+    } else if (detail.includes("未声明 Gemini 原生接口")) {
+      messages.add(`${group}：无 Gemini 接口，已跳过 Gemini CLI`);
+    } else if (detail.includes("部分配置需要选择路由模式")) {
+      routed.add(group);
+    } else if (detail.includes("的已有协议设置保留")) {
+      messages.add(
+        `${group}：${detail.split(" 的已有协议设置保留")[0]} 协议需核对`,
+      );
+    } else {
+      // Keep unexpected errors intact so partial sync failures remain visible.
+      messages.add(warning);
+    }
+  }
+  if (routed.size)
+    messages.add(`${[...routed].join("、")}：部分配置需启用路由`);
+  return [...messages].join("；");
+}
+
 export function HappyTokenLoginButton({
   collapsed = false,
 }: {
@@ -92,7 +126,7 @@ export function HappyTokenLoginButton({
       { duration: 8000 },
     );
     if (result.warnings.length) {
-      toast.warning(result.warnings.join("；"), { duration: 12000 });
+      toast.warning(compactSyncWarnings(result.warnings), { duration: 8000 });
     }
   });
 

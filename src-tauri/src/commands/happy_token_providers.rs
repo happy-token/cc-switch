@@ -133,6 +133,23 @@ fn provider(
     p
 }
 
+// Pi's original writer may drop apiFormat; the native api field is authoritative.
+pub(super) fn configured_format<'a>(app: &str, provider: &'a Provider) -> Option<&'a str> {
+    if app == "pi" {
+        match provider.settings_config["api"].as_str() {
+            Some("openai-responses") => return Some("openai_responses"),
+            Some("openai-completions") => return Some("openai_chat"),
+            Some("anthropic-messages") => return Some("anthropic"),
+            Some("google-generative-ai") => return Some("gemini_native"),
+            _ => {}
+        }
+    }
+    provider
+        .meta
+        .as_ref()
+        .and_then(|meta| meta.api_format.as_deref())
+}
+
 pub(super) fn excluded_group(name: &str) -> bool {
     matches!(name, "image" | "gpt-web")
 }
@@ -423,6 +440,15 @@ mod tests {
             find(&providers, "opencode").settings_config["npm"],
             "@ai-sdk/openai"
         );
+    }
+    #[test]
+    fn pi_native_protocol_survives_metadata_normalization() {
+        let providers = build_providers(42, &group("default", &[("gpt-5", Protocol::Chat)]));
+        let mut pi = find(&providers, "pi").clone();
+        pi.meta = None;
+        assert_eq!(configured_format("pi", &pi), Some("openai_chat"));
+        pi.settings_config["api"] = json!("openai-responses");
+        assert_eq!(configured_format("pi", &pi), Some("openai_responses"));
     }
     #[test]
     fn grok_build_accepts_custom_models_with_declared_protocols() {

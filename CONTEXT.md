@@ -59,3 +59,6 @@ _避免_：供应商（分组和 CC Switch 配置并非同一实体）。
 用户要求接口协议、分组模型及 Agent 兼容规则落档。标准契约见 [protocol-contract.md](docs/happy-token/protocol-contract.md)，逐模型证据见 [model-protocol-inventory.json](docs/happy-token/model-protocol-inventory.json)。区分客户端请求协议、网关声明、明确服务策略和真实工具验收；价目表接口不能替代真实分组调用。
 
 最新真实 dev 验证已完成更新配置、退出及重新授权：16 项 Default/Pro 配置，自动 image 配置 0 项，保留用户手动启用权。此结论取代上文历史“生产未发布/真实链路未通过”；Worker 72f9b8d 已发布，后续 image 服务端过滤仍未发布。Grok 官方支持自定义模型，本轮修正品牌限制；修正后导入数量尚未在 dev 再验证。
+
+
+用户要求同步提示精简：同类提示合并、去重；保留真实失败与需要操作的提示，工具验收说明留在协议文档。兼容生产 Worker 旧长文案，不为改提示额外部署。Pi 协议警告改按实际 settings.api 判断，避免原写入器省略 apiFormat 导致误报。

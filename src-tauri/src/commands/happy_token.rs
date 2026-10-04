@@ -528,14 +528,8 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
                     .map_err(|_| "无法读取已有 HappyToken 配置")?
                 {
                     providers::migrate_legacy(uid, &import_group, app_type, &mut existing);
-                    let existing_format = existing
-                        .meta
-                        .as_ref()
-                        .and_then(|meta| meta.api_format.as_deref());
-                    let generated_format = provider
-                        .meta
-                        .as_ref()
-                        .and_then(|meta| meta.api_format.as_deref());
+                    let existing_format = providers::configured_format(app_type, &existing);
+                    let generated_format = providers::configured_format(app_type, &provider);
                     if existing_format != generated_format && !review_apps.contains(&app_type) {
                         review_apps.push(app_type);
                     }

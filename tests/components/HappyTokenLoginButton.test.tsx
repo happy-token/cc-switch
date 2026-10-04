@@ -7,7 +7,10 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { HappyTokenLoginButton } from "@/components/HappyTokenLoginButton";
+import {
+  compactSyncWarnings,
+  HappyTokenLoginButton,
+} from "@/components/HappyTokenLoginButton";
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -265,5 +268,22 @@ describe("HappyToken login button", () => {
     expect(
       screen.getByRole("button", { name: "happyToken.accountMenu" }),
     ).toHaveTextContent("Fixture");
+  });
+});
+
+describe("sync warning summary", () => {
+  it("merges routine notices and preserves unexpected failures", () => {
+    expect(
+      compactSyncWarnings([
+        "gpt-web：当前后端不支持编码助手所需的函数工具调用；未创建专用令牌",
+        "default：部分配置需要选择路由模式进行协议转换；函数工具调用仍需真实任务验收",
+        "gpt-pro：部分配置需要选择路由模式进行协议转换；函数工具调用仍需真实任务验收",
+        "image：按账户配置范围排除，不导入编程助手",
+        "image：按账户配置范围排除，不导入编程助手",
+        "new-group：同步失败，请重试",
+      ]),
+    ).toBe(
+      "GPT Web 暂不支持编程助手；已跳过 Image；new-group：同步失败，请重试；default、gpt-pro：部分配置需启用路由",
+    );
   });
 });
