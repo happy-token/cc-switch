@@ -278,3 +278,6 @@ dev 完成更新、退出、重新授权；image 自动配置已全部清理，�
 
 
 C 方案已实现：沿用 quiet 按钮与原生命令，金额不再放大，外部链接图标右置，操作按服务/本地配置/退出分区。四语言补齐标题与分组标签，同步时间文案精简。账户组件 11 项测试和 TypeScript 检查通过，实际 Tauri dev 的真实账户面板截图确认；未重新打包、未部署 Gateway。
+
+
+发布验证见 [release.md](release.md)：跨平台 Actions 手动构建，macOS Developer ID 签名、公证及 stapler 校验，Windows MSI/NSIS；网站需独立区分 HappySwitch fork 与上游原版。验证状态以实际 Actions 结果更新，不把启动构建视为已通过。

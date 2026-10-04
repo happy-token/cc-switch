@@ -80,3 +80,6 @@ _避免_：供应商（分组和 CC Switch 配置并非同一实体）。
 
 
 用户已选择 C 传统设置面板。已应用到左下角账户入口：账户标题、身份、常规金额行、账户服务（充值/控制台）、本地配置（更新配置）、独立退出及简短同步时间；保持单栏，不新增账户设置页面。
+
+
+用户要求通过 GitHub Actions 验证 macOS/Windows 并生成 HappySwitch Release，供官网提供下载。已明确授权将 HappyRouter 对应 Apple 签名证书/公证凭据保存到本仓库 Secrets，仅供签名公证。首版 3.20.5，macOS Universal 和 Windows x64；Windows ARM64 尚未验证。发布流程见 [release.md](docs/happy-token/release.md)。网站生产上线尚未授权。
