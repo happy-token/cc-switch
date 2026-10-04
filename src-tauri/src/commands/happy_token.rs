@@ -42,6 +42,52 @@ pub struct AccountSummary {
     overview: Option<AccountOverview>,
 }
 const ACCOUNT_SETTING: &str = "happy_token_account";
+static ACCOUNT_WRITE: Lazy<tokio::sync::Mutex<()>> = Lazy::new(|| tokio::sync::Mutex::new(()));
+
+#[tauri::command]
+pub async fn happy_token_logout(app: tauri::AppHandle) -> Result<(), String> {
+    if STARTING.load(Ordering::SeqCst) {
+        return Err("正在打开授权页面，请稍后退出".into());
+    }
+    happy_token_cancel_login()?;
+    let _guard = ACCOUNT_WRITE.lock().await;
+    app.state::<AppState>()
+        .db
+        .set_setting(ACCOUNT_SETTING, "null")
+        .map_err(|_| "无法退出 HappyToken 账户")?;
+    Ok(())
+}
+
+fn config_hash(value: &Value) -> String {
+    format!("{:x}", Sha256::digest(value.to_string().as_bytes()))
+}
+
+fn provider_hash(provider: &crate::provider::Provider) -> String {
+    config_hash(
+        &json!({"settings": provider.settings_config, "meta": provider.meta,
+        "name": provider.name, "notes": provider.notes, "category": provider.category,
+        "website": provider.website_url, "icon": provider.icon, "iconColor": provider.icon_color}),
+    )
+}
+
+fn is_stale(
+    entry: &ManagedConfig,
+    current: &std::collections::HashSet<String>,
+    refreshed: &[String],
+    authorized: Option<&[String]>,
+) -> bool {
+    !current.contains(&entry.id)
+        && (refreshed.contains(&entry.group)
+            || authorized.is_some_and(|groups| !groups.contains(&entry.group)))
+}
+
+#[derive(Serialize, Deserialize)]
+struct ManagedConfig {
+    group: String,
+    app: String,
+    id: String,
+    hash: String,
+}
 
 #[tauri::command]
 pub fn happy_token_account(
@@ -51,6 +97,7 @@ pub fn happy_token_account(
         .db
         .get_setting(ACCOUNT_SETTING)
         .map_err(|_| "无法读取 HappyToken 账户")?
+        .filter(|value| value != "null")
         .map(|value| serde_json::from_str(&value).map_err(|_| "HappyToken 账户记录无效".into()))
         .transpose()
 }
@@ -81,6 +128,8 @@ struct Snapshot {
     overview: Option<AccountOverview>,
     groups: Vec<GroupSnapshot>,
     warnings: Vec<String>,
+    #[serde(default, rename = "authorizedGroups")]
+    authorized_groups: Option<Vec<String>>,
 }
 struct PendingLogin {
     code: String,
@@ -181,9 +230,7 @@ async fn start_login(app: tauri::AppHandle) -> Result<BrowserLogin, String> {
             *pending = None;
         }
         match result {
-            Ok(Some(result)) => {
-                let _ = app.emit_to("main", "happy-token-synced", result);
-            }
+            Ok(Some(_)) => {}
             Ok(None) => {
                 let _ = app.emit_to("main", "happy-token-cancelled", ());
             }
@@ -244,7 +291,13 @@ async fn poll_login(
                     .map_err(|_| "授权配置格式无效")?;
                 validate_snapshot(&snapshot)?;
                 let _ = app.emit_to("main", "happy-token-syncing", ());
-                return sync_snapshot(app, snapshot).await.map(Some);
+                let _guard = ACCOUNT_WRITE.lock().await;
+                if cancelled.load(Ordering::SeqCst) {
+                    return Ok(None);
+                }
+                let result = sync_snapshot(app, snapshot).await?;
+                let _ = app.emit_to("main", "happy-token-synced", &result);
+                return Ok(Some(result));
             }
             410 => return Err("浏览器授权已过期、取消或同步失败，请重新登录".into()),
             _ => return Err("无法完成浏览器授权，请重新登录".into()),
@@ -275,6 +328,16 @@ fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
             return Err("账户概况无效".into());
         }
     }
+    if snapshot.authorized_groups.as_ref().is_some_and(|names| {
+        names.len() > 32
+            || names
+                .iter()
+                .any(|n| n.is_empty() || n.len() > 256 || n.chars().any(char::is_control))
+            || names.iter().collect::<std::collections::HashSet<_>>().len() != names.len()
+            || snapshot.groups.iter().any(|g| !names.contains(&g.name))
+    }) {
+        return Err("授权分组清单无效".into());
+    }
     let mut names = std::collections::HashSet::new();
     for group in &snapshot.groups {
         if group.name.is_empty()
@@ -303,6 +366,17 @@ fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
 }
 
 async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<SyncResult, String> {
+    let manifest_key = format!("happy_token_managed_{}", snapshot.uid);
+    let state = app.state::<AppState>();
+    let mut managed: Vec<ManagedConfig> = state
+        .db
+        .get_setting(&manifest_key)
+        .map_err(|_| "无法读取自动配置记录")?
+        .map(|v| serde_json::from_str(&v).map_err(|_| "自动配置记录无效"))
+        .transpose()?
+        .unwrap_or_default();
+    let refreshed: Vec<String> = snapshot.groups.iter().map(|g| g.name.clone()).collect();
+    let mut current_ids = std::collections::HashSet::new();
     let mut result = SyncResult {
         account: snapshot.account,
         overview: snapshot.overview,
@@ -339,6 +413,30 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
                 "{}：部分配置需要选择路由模式进行协议转换；函数工具调用仍需真实任务验收",
                 group.name
             ));
+        }
+        for (app_type, provider) in &providers {
+            current_ids.insert(provider.id.clone());
+            let previous = managed.iter().find(|m| m.id == provider.id);
+            if let Some(existing) = state
+                .db
+                .get_provider_by_id(&provider.id, app_type)
+                .map_err(|_| "无法读取自动配置")?
+            {
+                if previous.is_some_and(|m| m.hash == provider_hash(&existing)) {
+                    let mut updated = existing;
+                    updated.settings_config = provider.settings_config.clone();
+                    updated.meta = provider.meta.clone();
+                    updated.notes = provider.notes.clone();
+                    crate::services::ProviderService::update(
+                        state.inner(),
+                        crate::app_config::AppType::from_str(app_type)
+                            .map_err(|_| "助手类型无效")?,
+                        None,
+                        updated,
+                    )
+                    .map_err(|_| "无法更新自动协议配置")?;
+                }
+            }
         }
         let handle = app.clone();
         let import_group = group.clone();
@@ -394,6 +492,15 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
         })
         .await
         .map_err(|_| "配置保存任务失败")??;
+        for (app_type, provider) in providers::build_providers(snapshot.uid, &group) {
+            managed.retain(|m| m.id != provider.id);
+            managed.push(ManagedConfig {
+                group: group.name.clone(),
+                app: app_type.into(),
+                id: provider.id.clone(),
+                hash: provider_hash(&provider),
+            });
+        }
         result.providers += count;
         if !review_apps.is_empty() {
             result.warnings.push(format!(
@@ -404,6 +511,54 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
         }
         result.groups.push(group.name);
     }
+    let mut retained = Vec::new();
+    for entry in managed {
+        let stale = is_stale(
+            &entry,
+            &current_ids,
+            &refreshed,
+            snapshot.authorized_groups.as_deref(),
+        );
+        if stale {
+            let app_type =
+                crate::app_config::AppType::from_str(&entry.app).map_err(|_| "助手类型无效")?;
+            if let Some(existing) = state
+                .db
+                .get_provider_by_id(&entry.id, &entry.app)
+                .map_err(|_| "无法读取旧自动配置")?
+            {
+                // Additive applications may already have written this provider to live files.
+                let active = existing.in_failover_queue
+                    || app_type.is_additive_mode()
+                    || app_type == crate::app_config::AppType::Pi
+                    || state
+                        .db
+                        .get_current_provider(&entry.app)
+                        .map_err(|_| "无法读取当前配置")?
+                        .as_deref()
+                        == Some(&entry.id);
+                if !active && entry.hash == provider_hash(&existing) {
+                    crate::services::ProviderService::delete(state.inner(), app_type, &entry.id)
+                        .map_err(|_| "无法清理旧自动配置")?;
+                    continue;
+                }
+                result.warnings.push(format!(
+                    "{} / {}：分组或协议已不可用，正在使用或自定义的配置已保留，请手动处理",
+                    entry.group, entry.app
+                ));
+            } else {
+                continue;
+            }
+        }
+        retained.push(entry);
+    }
+    state
+        .db
+        .set_setting(
+            &manifest_key,
+            &serde_json::to_string(&retained).map_err(|_| "自动配置记录格式无效")?,
+        )
+        .map_err(|_| "无法保存自动配置记录")?;
     let summary = AccountSummary {
         account: result.account.clone(),
         overview: result.overview.clone(),
@@ -481,6 +636,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn reconciliation_requires_authoritative_absence_or_a_successful_refresh() {
+        let entry = ManagedConfig {
+            group: "pro".into(),
+            app: "codex".into(),
+            id: "managed".into(),
+            hash: "fixture".into(),
+        };
+        let none = std::collections::HashSet::new();
+        assert!(!is_stale(&entry, &none, &[], None));
+        assert!(!is_stale(&entry, &none, &[], Some(&["pro".into()])));
+        assert!(is_stale(&entry, &none, &[], Some(&[])));
+        assert!(is_stale(&entry, &none, &["pro".into()], None));
+        let present = std::collections::HashSet::from(["managed".into()]);
+        assert!(!is_stale(&entry, &present, &["pro".into()], Some(&[])));
+        assert_ne!(
+            config_hash(&json!({"model": "user-edited"})),
+            config_hash(&json!({"model": "generated"}))
+        );
+    }
+
+    #[test]
     fn browser_grants_and_snapshots_reject_untrusted_values() {
         let verifier = URL_SAFE_NO_PAD.encode([7u8; 32]);
         assert_eq!(verifier.len(), 43);
@@ -495,6 +671,7 @@ mod tests {
         grant.id = "https://evil.test".into();
         assert!(!valid_grant(&grant));
         let mut snapshot = Snapshot {
+            authorized_groups: None,
             uid: 42,
             account: "Test".into(),
             overview: None,

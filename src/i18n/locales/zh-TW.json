@@ -4548,8 +4548,11 @@
     }
   },
   "happyToken": {
+    "logout": "登出",
+    "loggedOut": "已登出，已匯入設定保留",
+    "logoutFailed": "登出失敗，請重試",
     "login": "登录 HappyToken",
-    "sync": "同步設定",
+    "sync": "更新設定",
     "syncing": "正在同步分组…",
     "help": "登录后自动导入账户全部可用编程模型分组；选择分组即可启用",
     "account": "当前账户：{{account}}。点击重新登录并同步分组。",

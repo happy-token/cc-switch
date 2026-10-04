@@ -4547,8 +4547,11 @@
     }
   },
   "happyToken": {
+    "logout": "Log out",
+    "loggedOut": "Logged out; imported configurations retained",
+    "logoutFailed": "Could not log out. Please retry.",
     "login": "Sign in to HappyToken",
-    "sync": "Sync configuration",
+    "sync": "Update configuration",
     "syncing": "Syncing groups…",
     "help": "Sign in to import all available coding model groups, then select a group to activate it.",
     "account": "Account: {{account}}. Sign in again to sync groups.",

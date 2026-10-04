@@ -4547,8 +4547,11 @@
     }
   },
   "happyToken": {
+    "logout": "ログアウト",
+    "loggedOut": "ログアウトしました。インポート済み設定は保持されます",
+    "logoutFailed": "ログアウトできませんでした。再試行してください",
     "login": "Sign in to HappyToken",
-    "sync": "設定を同期",
+    "sync": "設定を更新",
     "syncing": "Syncing groups…",
     "help": "Sign in to import all available coding model groups, then select a group to activate it.",
     "account": "Account: {{account}}. Sign in again to sync groups.",

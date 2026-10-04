@@ -47,6 +47,8 @@ export function HappyTokenLoginButton({
   const [summary, setSummary] = useState<AccountSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const synced = useRef(false);
+  const loggedOut = useRef(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const account = summary?.account || "";
   const [code, setCode] = useState("");
   const [opening, setOpening] = useState(false);
@@ -76,6 +78,7 @@ export function HappyTokenLoginButton({
     toast.error(message, { duration: 8000 });
   });
   useTauriEvent<SyncResult>("happy-token-synced", async (result) => {
+    if (loggedOut.current) return;
     setStatus("idle");
     setCode("");
     synced.current = true;
@@ -93,7 +96,26 @@ export function HappyTokenLoginButton({
     }
   });
 
+  const logout = async () => {
+    setLoggingOut(true);
+    try {
+      await invoke("happy_token_logout");
+      loggedOut.current = true;
+      synced.current = true;
+      setSummary(null);
+      setMenuOpen(false);
+      setStatus("idle");
+      setCode("");
+      toast.success(t("happyToken.loggedOut"));
+    } catch {
+      toast.error(t("happyToken.logoutFailed"));
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
   const login = async () => {
+    loggedOut.current = false;
     setMenuOpen(false);
     setStatus("login");
     setOpening(true);
@@ -138,7 +160,7 @@ export function HappyTokenLoginButton({
         "w-full min-w-0 px-2",
         collapsed ? "justify-center" : "justify-start",
       )}
-      disabled={status === "syncing" || opening}
+      disabled={status === "syncing" || opening || loggingOut}
       onClick={!account ? () => void login() : undefined}
       title={account || t("happyToken.help")}
       aria-label={account ? t("happyToken.accountMenu", { account }) : label}
@@ -221,10 +243,19 @@ export function HappyTokenLoginButton({
               variant="quiet"
               size="compact"
               className="mt-2 w-full"
-              disabled={status !== "idle" || opening}
+              disabled={status !== "idle" || opening || loggingOut}
               onClick={() => void login()}
             >
               {t("happyToken.sync")}
+            </Button>
+            <Button
+              variant="quiet"
+              size="compact"
+              className="w-full"
+              disabled={status !== "idle" || opening || loggingOut}
+              onClick={() => void logout()}
+            >
+              {t("happyToken.logout")}
             </Button>
           </PopoverContent>
         </Popover>
@@ -265,7 +296,7 @@ export function HappyTokenLoginButton({
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              disabled={status === "syncing" || opening}
+              disabled={status === "syncing" || opening || loggingOut}
               onClick={() => void login()}
             >
               {t("happyToken.reopen")}

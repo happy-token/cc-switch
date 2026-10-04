@@ -214,4 +214,56 @@ describe("HappyToken login button", () => {
     expect(screen.getByRole("button")).toHaveTextContent("New account");
     expect(screen.queryByText("Old account")).not.toBeInTheDocument();
   });
+  it("logs out locally, ignores late sync, and allows a new login", async () => {
+    mocks.invoke.mockImplementation(async (command: string) =>
+      command === "happy_token_account"
+        ? { account: "Fixture", overview: null }
+        : { code: "1234ABCD" },
+    );
+    render(<HappyTokenLoginButton />);
+    await waitFor(() =>
+      expect(screen.getByRole("button")).toHaveTextContent("Fixture"),
+    );
+    fireEvent.click(screen.getByRole("button"));
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "happyToken.logout" }),
+      );
+    });
+    expect(mocks.invoke).toHaveBeenCalledWith("happy_token_logout");
+    await act(async () => {
+      await mocks.handlers.get("happy-token-synced")?.({
+        account: "Late",
+        groups: [],
+        providers: 0,
+        warnings: [],
+      });
+    });
+    expect(screen.getByRole("button")).toHaveTextContent("happyToken.login");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+    });
+    expect(mocks.invoke).toHaveBeenCalledWith("happy_token_login");
+  });
+  it("keeps the account when logout fails", async () => {
+    mocks.invoke.mockImplementation(async (command: string) => {
+      if (command === "happy_token_logout")
+        throw new Error("database unavailable");
+      return { account: "Fixture", overview: null };
+    });
+    render(<HappyTokenLoginButton />);
+    await waitFor(() =>
+      expect(screen.getByRole("button")).toHaveTextContent("Fixture"),
+    );
+    fireEvent.click(screen.getByRole("button"));
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "happyToken.logout" }),
+      );
+    });
+    expect(mocks.error).toHaveBeenCalledWith("happyToken.logoutFailed");
+    expect(
+      screen.getByRole("button", { name: "happyToken.accountMenu" }),
+    ).toHaveTextContent("Fixture");
+  });
 });
