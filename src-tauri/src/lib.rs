@@ -1394,6 +1394,7 @@ pub fn run() {
         })
         .invoke_handler(restrict_login_window(tauri::generate_handler![
             commands::happy_token_login,
+            commands::happy_token_cancel_login,
             commands::get_providers,
             commands::get_current_provider,
             commands::add_provider,

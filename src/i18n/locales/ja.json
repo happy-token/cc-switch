@@ -4553,6 +4553,13 @@
     "help": "Sign in to import all available coding model groups, then select a group to activate it.",
     "account": "Account: {{account}}. Sign in again to sync groups.",
     "synced": "Synced {{count}} configurations: {{groups}}. Select a group to activate it.",
-    "openFailed": "Could not open HappyToken sign-in. Please retry."
+    "openFailed": "ブラウザー認証を開始できません。ネットワークとゲートウェイの対応状況を確認してください。",
+    "browserTitle": "ブラウザーで HappyToken にログイン",
+    "browserHelp": "ブラウザーの認証コードが下のコードと一致することを確認して許可してください。",
+    "code": "認証コード",
+    "waiting": "ブラウザー認証を待っています（最大10分）。",
+    "reopen": "ブラウザーを再度開く",
+    "cancel": "ログインを中止",
+    "cancelFailed": "中止できません。再試行してください。"
   }
 }

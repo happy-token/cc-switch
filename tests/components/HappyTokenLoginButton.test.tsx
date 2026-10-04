@@ -36,20 +36,27 @@ vi.mock("@/hooks/useTauriEvent", () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.handlers.clear();
-  mocks.invoke.mockResolvedValue(undefined);
+  mocks.invoke.mockResolvedValue({ code: "1234ABCD" });
   mocks.invalidate.mockResolvedValue(undefined);
 });
 afterEach(cleanup);
 
 describe("HappyToken login button", () => {
-  it("opens native login and allows retry after cancellation", async () => {
+  it("opens browser login and allows retry after cancellation", async () => {
     render(<HappyTokenLoginButton />);
-    fireEvent.click(screen.getByRole("button"));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+    });
     expect(mocks.invoke).toHaveBeenCalledWith("happy_token_login");
+    await waitFor(() =>
+      expect(screen.getByText("1234ABCD")).toBeInTheDocument(),
+    );
     act(() => {
       mocks.handlers.get("happy-token-cancelled")?.();
     });
-    fireEvent.click(screen.getByRole("button"));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+    });
     expect(mocks.invoke).toHaveBeenCalledTimes(2);
   });
 
@@ -80,10 +87,36 @@ describe("HappyToken login button", () => {
   it("reports native login launch failure and resets the button", async () => {
     mocks.invoke.mockRejectedValueOnce(new Error("launch failure"));
     render(<HappyTokenLoginButton />);
-    fireEvent.click(screen.getByRole("button"));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+    });
     await waitFor(() =>
       expect(mocks.error).toHaveBeenCalledWith("happyToken.openFailed"),
     );
     expect(screen.getByRole("button")).toBeEnabled();
+  });
+  it("shows the matching code, reopens the same browser request and cancels", async () => {
+    render(<HappyTokenLoginButton />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+    });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("1234ABCD")).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "happyToken.reopen" }),
+      );
+    });
+    expect(mocks.invoke).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "happyToken.cancel" }),
+      );
+    });
+    expect(mocks.invoke).toHaveBeenLastCalledWith("happy_token_cancel_login");
+    act(() => {
+      mocks.handlers.get("happy-token-cancelled")?.();
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

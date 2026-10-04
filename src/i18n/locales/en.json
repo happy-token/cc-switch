@@ -4553,6 +4553,13 @@
     "help": "Sign in to import all available coding model groups, then select a group to activate it.",
     "account": "Account: {{account}}. Sign in again to sync groups.",
     "synced": "Synced {{count}} configurations: {{groups}}. Select a group to activate it.",
-    "openFailed": "Could not open HappyToken sign-in. Please retry."
+    "openFailed": "Unable to start browser authorization. Check your network and gateway desktop login availability.",
+    "browserTitle": "Sign in to HappyToken in your browser",
+    "browserHelp": "Match the code on the browser authorization page with the code below before approving.",
+    "code": "Authorization code",
+    "waiting": "Waiting for browser authorization, up to 10 minutes.",
+    "reopen": "Reopen browser",
+    "cancel": "Cancel login",
+    "cancelFailed": "Unable to cancel. Please try again."
   }
 }

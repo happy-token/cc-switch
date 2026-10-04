@@ -1,22 +1,20 @@
-//! HappyToken login reuses the Gateway/Casdoor flow without granting remote pages IPC access.
+//! Browser authorization never imports browser cookies into the desktop application.
+use crate::{provider::Provider, store::AppState};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use once_cell::sync::Lazy;
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::str::FromStr;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 use std::time::Duration;
-
-use reqwest::{header, Client, Method};
-use serde::Serialize;
-use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
-use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
-
-use crate::{provider::Provider, store::AppState};
-
+use tauri::{Emitter, Manager};
+use tauri_plugin_opener::OpenerExt;
 const GATEWAY: &str = "https://gateway.happy-token.cn";
-const LOGIN_WINDOW: &str = "happy-token-login";
-const CALLBACK_PATH: &str = "/__happy_switch_authenticated";
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,346 +24,292 @@ struct SyncResult {
     providers: usize,
     warnings: Vec<String>,
 }
-
-fn callback_uid(url: &url::Url, nonce: &str) -> Option<u64> {
-    if url.origin().ascii_serialization() != GATEWAY || url.path() != CALLBACK_PATH {
-        return None;
-    }
-    let pairs: std::collections::HashMap<_, _> = url.query_pairs().collect();
-    if pairs.get("state")?.as_ref() != nonce {
-        return None;
-    }
-    pairs.get("uid")?.parse::<u64>().ok().filter(|id| *id > 0)
+#[derive(Deserialize)]
+struct BrowserGrant {
+    id: String,
+    code: String,
+    #[serde(rename = "expiresIn")]
+    expires_in: u64,
 }
-
-#[tauri::command]
-pub async fn happy_token_login(app: tauri::AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window(LOGIN_WINDOW) {
-        window
-            .set_focus()
-            .map_err(|_| "无法打开登录窗口".to_string())?;
-        return Ok(());
-    }
-    let nonce = uuid::Uuid::new_v4().to_string();
-    // Only a verified numeric user ID crosses the navigation callback. Credentials never enter URLs.
-    let script = include_str!("happy_token_login.js").replace("__HAPPY_NONCE__", &nonce);
-    let busy = Arc::new(AtomicBool::new(false));
-    let navigation_busy = busy.clone();
-    let navigation_app = app.clone();
-    let window = WebviewWindowBuilder::new(
-        &app,
-        LOGIN_WINDOW,
-        WebviewUrl::External(
-            format!("{GATEWAY}/sso?next=%2Fdashboard&lang=zh")
-                .parse()
-                .unwrap(),
-        ),
-    )
-    .title("HappyToken · 登录并自动配置")
-    .inner_size(980.0, 760.0)
-    .initialization_script(script)
-    .on_navigation(move |url| {
-        if url.path() == CALLBACK_PATH {
-            if let Some(uid) = callback_uid(url, &nonce) {
-                if !navigation_busy.swap(true, Ordering::SeqCst) {
-                    let handle = navigation_app.clone();
-                    tauri::async_runtime::spawn(async move {
-                        let _ = handle.emit_to("main", "happy-token-syncing", ());
-                        let result = sync_from_window(&handle, uid).await;
-                        match result {
-                            Ok(result) => {
-                                let _ = handle.emit_to("main", "happy-token-synced", result);
-                            }
-                            Err(error) => {
-                                let _ = handle.emit_to("main", "happy-token-error", error);
-                            }
-                        }
-                        if let Some(window) = handle.get_webview_window(LOGIN_WINDOW) {
-                            let _ = window.close();
-                        }
-                    });
-                }
-            }
-            return false;
-        }
-        // Casdoor may redirect through external identity providers; none receive native permissions.
-        url.scheme() == "https"
-    })
-    .build()
-    .map_err(|_| "无法创建 HappyToken 登录窗口".to_string())?;
-    let close_app = app.clone();
-    window.on_window_event(move |event| {
-        if matches!(event, tauri::WindowEvent::Destroyed) && !busy.load(Ordering::SeqCst) {
-            let _ = close_app.emit_to("main", "happy-token-cancelled", ());
-        }
-    });
-    Ok(())
+#[derive(Serialize)]
+pub struct BrowserLogin {
+    code: String,
 }
+#[derive(Deserialize)]
+struct GroupSnapshot {
+    name: String,
+    key: String,
+    models: Vec<String>,
+}
+#[derive(Deserialize)]
+struct Snapshot {
+    uid: u64,
+    account: String,
+    groups: Vec<GroupSnapshot>,
+    warnings: Vec<String>,
+}
+struct PendingLogin {
+    code: String,
+    url: String,
+    cancelled: Arc<AtomicBool>,
+}
+static PENDING: Lazy<Mutex<Option<PendingLogin>>> = Lazy::new(|| Mutex::new(None));
+static STARTING: AtomicBool = AtomicBool::new(false);
 
-async fn sync_from_window(app: &tauri::AppHandle, uid: u64) -> Result<SyncResult, String> {
-    let window = app
-        .get_webview_window(LOGIN_WINDOW)
-        .ok_or("登录窗口已关闭")?;
-    if window
-        .url()
-        .map_err(|_| "无法验证登录来源")?
-        .origin()
-        .ascii_serialization()
-        != GATEWAY
-    {
-        return Err("登录来源无效，请重新登录".into());
-    }
-    // Cookie APIs must run away from the UI thread to avoid WebView2 deadlocks on Windows.
-    let cookies = tauri::async_runtime::spawn_blocking(move || {
-        window.cookies_for_url(format!("{GATEWAY}/api/user/self").parse().unwrap())
-    })
-    .await
-    .map_err(|_| "无法读取登录会话")?
-    .map_err(|_| "无法读取登录会话")?;
-    let cookie = cookies
-        .iter()
-        .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
-        .collect::<Vec<_>>()
-        .join("; ");
-    if cookie.is_empty() {
-        return Err("未取得 Gateway 登录会话，请重新登录".into());
-    }
-    let mut headers = header::HeaderMap::new();
-    let mut cookie_header =
-        header::HeaderValue::from_str(&cookie).map_err(|_| "登录会话格式错误")?;
-    cookie_header.set_sensitive(true);
-    headers.insert(header::COOKIE, cookie_header);
-    headers.insert(
-        "New-Api-User",
-        header::HeaderValue::from_str(&uid.to_string()).unwrap(),
-    );
-    headers.insert(header::ORIGIN, header::HeaderValue::from_static(GATEWAY));
-    let client = Client::builder()
-        .default_headers(headers)
+fn challenge(verifier: &str) -> String {
+    URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()))
+}
+fn valid_grant(grant: &BrowserGrant) -> bool {
+    grant.id.len() == 32
+        && grant
+            .id
+            .bytes()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+        && grant.code.len() == 8
+        && grant
+            .code
+            .bytes()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase())
+        && (1..=600).contains(&grant.expires_in)
+}
+fn client() -> Result<Client, String> {
+    Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .timeout(Duration::from_secs(30))
         .build()
-        .map_err(|_| "无法创建 Gateway 客户端")?;
-    let user = api(&client, Method::GET, "/api/user/self", None).await?;
-    if user["id"].as_u64() != Some(uid) {
-        return Err("登录账户校验失败".into());
+        .map_err(|_| "无法创建登录客户端".into())
+}
+fn open_browser(app: &tauri::AppHandle, url: &str) -> Result<(), String> {
+    app.opener()
+        .open_url(url, None::<String>)
+        .map_err(|_| "无法打开默认浏览器".into())
+}
+
+#[tauri::command]
+pub async fn happy_token_login(app: tauri::AppHandle) -> Result<BrowserLogin, String> {
+    {
+        let pending = PENDING.lock().map_err(|_| "登录状态不可用")?;
+        if let Some(pending) = pending.as_ref() {
+            open_browser(&app, &pending.url)?;
+            return Ok(BrowserLogin {
+                code: pending.code.clone(),
+            });
+        }
     }
-    let groups = api(&client, Method::GET, "/api/user/self/groups", None).await?;
-    let groups = groups.as_object().ok_or("网关返回的分组格式无效")?;
-    if groups.is_empty() {
-        return Err("此账户没有可用分组".into());
+    if STARTING.swap(true, Ordering::SeqCst) {
+        return Err("正在打开浏览器登录，请稍候".into());
     }
+    let result = start_login(app).await;
+    STARTING.store(false, Ordering::SeqCst);
+    result
+}
+async fn start_login(app: tauri::AppHandle) -> Result<BrowserLogin, String> {
+    // Two independent UUIDs provide 244 random bits; base64url produces a 43-character verifier.
+    let mut bytes = Vec::from(*uuid::Uuid::new_v4().as_bytes());
+    bytes.extend_from_slice(uuid::Uuid::new_v4().as_bytes());
+    let verifier = URL_SAFE_NO_PAD.encode(bytes);
+    let client = client()?;
+    let response = client
+        .post(format!("{GATEWAY}/sso/desktop/start"))
+        .json(&json!({"challenge": challenge(&verifier)}))
+        .send()
+        .await
+        .map_err(|_| "无法连接 HappyToken，请检查网络")?;
+    if !response.status().is_success() {
+        return Err("浏览器授权服务尚不可用，请确认网关已发布桌面授权功能".into());
+    }
+    let grant: BrowserGrant = response
+        .json()
+        .await
+        .map_err(|_| "网关尚未提供浏览器授权接口")?;
+    if !valid_grant(&grant) {
+        return Err("浏览器授权响应无效".into());
+    }
+    let url = format!("{GATEWAY}/sso/desktop?id={}", grant.id);
+    if let Err(error) = open_browser(&app, &url) {
+        let _ = client
+            .post(format!("{GATEWAY}/sso/desktop/cancel"))
+            .json(&json!({"id":grant.id,"verifier":verifier}))
+            .send()
+            .await;
+        return Err(error);
+    }
+    let code = grant.code.clone();
+    let cancelled = Arc::new(AtomicBool::new(false));
+    *PENDING.lock().map_err(|_| "登录状态不可用")? = Some(PendingLogin {
+        code: code.clone(),
+        url,
+        cancelled: cancelled.clone(),
+    });
+    tauri::async_runtime::spawn(async move {
+        let result = poll_login(&app, &client, &grant, &verifier, &cancelled).await;
+        if let Ok(mut pending) = PENDING.lock() {
+            *pending = None;
+        }
+        match result {
+            Ok(Some(result)) => {
+                let _ = app.emit_to("main", "happy-token-synced", result);
+            }
+            Ok(None) => {
+                let _ = app.emit_to("main", "happy-token-cancelled", ());
+            }
+            Err(error) => {
+                let _ = app.emit_to("main", "happy-token-error", error);
+            }
+        }
+    });
+    Ok(BrowserLogin { code })
+}
+#[tauri::command]
+pub fn happy_token_cancel_login() -> Result<(), String> {
+    if let Some(pending) = PENDING.lock().map_err(|_| "登录状态不可用")?.as_ref() {
+        pending.cancelled.store(true, Ordering::SeqCst);
+    }
+    Ok(())
+}
+async fn poll_login(
+    app: &tauri::AppHandle,
+    client: &Client,
+    grant: &BrowserGrant,
+    verifier: &str,
+    cancelled: &AtomicBool,
+) -> Result<Option<SyncResult>, String> {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(grant.expires_in);
+    loop {
+        if cancelled.load(Ordering::SeqCst) || tokio::time::Instant::now() >= deadline {
+            let _ = client
+                .post(format!("{GATEWAY}/sso/desktop/cancel"))
+                .json(&json!({"id":grant.id,"verifier":verifier}))
+                .send()
+                .await;
+            return if cancelled.load(Ordering::SeqCst) {
+                Ok(None)
+            } else {
+                Err("浏览器登录已超时，请重新登录".into())
+            };
+        }
+        let response = client
+            .post(format!("{GATEWAY}/sso/desktop/poll"))
+            .json(&json!({"id":grant.id,"verifier":verifier}))
+            .send()
+            .await
+            .map_err(|_| "无法获取浏览器授权结果，请重新登录")?;
+        if cancelled.load(Ordering::SeqCst) {
+            continue;
+        }
+        match response.status().as_u16() {
+            202 | 429 => {
+                tokio::time::sleep(Duration::from_secs(2)).await;
+            }
+            200 => {
+                let value: Value = response.json().await.map_err(|_| "授权结果格式无效")?;
+                if value["status"] != "ready" {
+                    return Err("授权状态无效".into());
+                }
+                let snapshot: Snapshot = serde_json::from_value(value["data"].clone())
+                    .map_err(|_| "授权配置格式无效")?;
+                validate_snapshot(&snapshot)?;
+                let _ = app.emit_to("main", "happy-token-syncing", ());
+                return sync_snapshot(app, snapshot).await.map(Some);
+            }
+            410 => return Err("浏览器授权已过期、取消或同步失败，请重新登录".into()),
+            _ => return Err("无法完成浏览器授权，请重新登录".into()),
+        }
+    }
+}
+fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
+    if snapshot.uid == 0
+        || snapshot.account.len() > 1024
+        || snapshot.groups.is_empty()
+        || snapshot.groups.len() > 32
+        || snapshot.warnings.len() > 32
+    {
+        return Err("授权配置无效".into());
+    }
+    let mut names = std::collections::HashSet::new();
+    for group in &snapshot.groups {
+        if group.name.is_empty()
+            || group.name.len() > 256
+            || !names.insert(&group.name)
+            || !group.key.starts_with("sk-")
+            || group.key.len() <= 3
+            || group.key.len() > 512
+            || group.key.contains('*')
+            || group.key.chars().any(char::is_control)
+            || group.models.len() > 10000
+            || group
+                .models
+                .iter()
+                .any(|m| m.len() > 512 || m.chars().any(char::is_control))
+        {
+            return Err("授权分组配置无效".into());
+        }
+    }
+    Ok(())
+}
+
+async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<SyncResult, String> {
     let mut result = SyncResult {
-        account: user["display_name"]
-            .as_str()
-            .filter(|s| !s.is_empty())
-            .or_else(|| user["username"].as_str())
-            .unwrap_or("HappyToken")
-            .to_string(),
+        account: snapshot.account,
         groups: Vec::new(),
         providers: 0,
-        warnings: Vec::new(),
+        warnings: snapshot.warnings,
     };
-    let mut tokens = list_tokens(&client).await?;
-    // Sort for stable import order; every advertised group is considered, including future groups.
-    let mut group_names: Vec<_> = groups.keys().cloned().collect();
-    group_names.sort();
-    for group in group_names {
-        match prepare_group(&client, uid, &group, &mut tokens).await {
-            Ok(providers) => {
-                if providers.is_empty() {
-                    result.warnings.push(format!(
-                        "{group}：没有适用于 Claude Code、Codex 或 Gemini 的模型"
-                    ));
+    for group in snapshot.groups {
+        let providers = build_providers(snapshot.uid, &group.name, &group.key, &group.models);
+        if providers.is_empty() {
+            result.warnings.push(format!(
+                "{}：没有适用于 Claude Code、Codex 或 Gemini 的模型",
+                group.name
+            ));
+            continue;
+        }
+        let handle = app.clone();
+        let count = tauri::async_runtime::spawn_blocking(move || {
+            let state = handle.state::<AppState>();
+            let mut count = 0;
+            for (app_type, mut provider) in providers {
+                // Save to the library only; switching uses CC Switch's normal config writer.
+                // Re-sync refreshes credentials while retaining user customizations.
+                if let Some(mut existing) = state
+                    .db
+                    .get_provider_by_id(&provider.id, app_type)
+                    .map_err(|_| "无法读取已有 HappyToken 配置")?
+                {
+                    refresh_key(
+                        &mut existing.settings_config,
+                        &provider.settings_config,
+                        app_type,
+                    )?;
+                    provider = existing;
+                    crate::services::ProviderService::update(
+                        state.inner(),
+                        crate::app_config::AppType::from_str(app_type)
+                            .map_err(|_| "助手类型无效")?,
+                        None,
+                        provider,
+                    )
+                    .map_err(|_| "无法更新 HappyToken 配置")?;
+                    count += 1;
                     continue;
                 }
-                let handle = app.clone();
-                let count = tauri::async_runtime::spawn_blocking(move || {
-                    let state = handle.state::<AppState>();
-                    let mut count = 0;
-                    for (app_type, mut provider) in providers {
-                        // Save to the library only; switching uses CC Switch's normal config writer.
-                        // Re-sync refreshes credentials while retaining user customizations.
-                        if let Some(mut existing) = state
-                            .db
-                            .get_provider_by_id(&provider.id, app_type)
-                            .map_err(|_| "无法读取已有 HappyToken 配置")?
-                        {
-                            refresh_key(
-                                &mut existing.settings_config,
-                                &provider.settings_config,
-                                app_type,
-                            )?;
-                            provider = existing;
-                            crate::services::ProviderService::update(
-                                state.inner(),
-                                crate::app_config::AppType::from_str(app_type)
-                                    .map_err(|_| "助手类型无效")?,
-                                None,
-                                provider,
-                            )
-                            .map_err(|_| "无法更新 HappyToken 配置")?;
-                            count += 1;
-                            continue;
-                        }
-                        state
-                            .db
-                            .save_provider(app_type, &provider)
-                            .map_err(|_| "无法保存 HappyToken 配置")?;
-                        count += 1;
-                    }
-                    Ok::<_, String>(count)
-                })
-                .await
-                .map_err(|_| "配置保存任务失败")??;
-                result.providers += count;
-                result.groups.push(group);
+                state
+                    .db
+                    .save_provider(app_type, &provider)
+                    .map_err(|_| "无法保存 HappyToken 配置")?;
+                count += 1;
             }
-            Err(_) => result.warnings.push(format!(
-                "{group}：同步失败，请检查分组权限、余额或网关状态后重试"
-            )),
-        }
+            Ok::<_, String>(count)
+        })
+        .await
+        .map_err(|_| "配置保存任务失败")??;
+        result.providers += count;
+        result.groups.push(group.name);
     }
     if result.providers == 0 {
         return Err(format!("未导入任何配置。{}", result.warnings.join("；")));
     }
     Ok(result)
-}
-
-// Errors are deliberately bounded and exclude response bodies, cookies, and API keys.
-async fn api(
-    client: &Client,
-    method: Method,
-    path: &str,
-    body: Option<Value>,
-) -> Result<Value, String> {
-    let mut request = client.request(method, format!("{GATEWAY}{path}"));
-    if let Some(body) = body {
-        request = request.json(&body);
-    }
-    let response = request
-        .send()
-        .await
-        .map_err(|_| "Gateway 请求失败，请检查网络")?;
-    if !response.status().is_success() {
-        return Err(format!(
-            "Gateway 请求失败（HTTP {}）",
-            response.status().as_u16()
-        ));
-    }
-    let value: Value = response
-        .json()
-        .await
-        .map_err(|_| "Gateway 返回了无效数据")?;
-    if value["success"] != true {
-        return Err("Gateway 拒绝了请求，请检查账户权限后重试".into());
-    }
-    Ok(value["data"].clone())
-}
-
-async fn list_tokens(client: &Client) -> Result<Vec<Value>, String> {
-    let mut tokens = Vec::new();
-    for page in 1..=100 {
-        let data = api(
-            client,
-            Method::GET,
-            &format!("/api/token/?p={page}&page_size=100"),
-            None,
-        )
-        .await?;
-        let items = data["items"].as_array().ok_or("Gateway 令牌列表格式无效")?;
-        tokens.extend(items.iter().cloned());
-        if items.is_empty()
-            || tokens.len() as u64 >= data["total"].as_u64().ok_or("Gateway 令牌分页格式无效")?
-        {
-            return Ok(tokens);
-        }
-    }
-    Err("账户令牌数量超出同步上限".into())
-}
-
-fn token_name(group: &str) -> String {
-    // NewAPI caps names at 50 characters; hashing also avoids collisions after truncation.
-    format!("HappySwitch-{:x}", Sha256::digest(group.as_bytes()))[..44].to_string()
-}
-
-fn reusable_token<'a>(tokens: &'a [Value], group: &str, now: i64) -> Option<&'a Value> {
-    let name = token_name(group);
-    tokens.iter().find(|token| {
-        token["name"].as_str() == Some(&name)
-            && token["group"].as_str() == Some(group)
-            && token["status"] == 1
-            && (token["expired_time"] == -1
-                || token["expired_time"]
-                    .as_i64()
-                    .is_some_and(|expiry| expiry > now))
-            && (token["unlimited_quota"] == true
-                || token["remain_quota"]
-                    .as_i64()
-                    .is_some_and(|quota| quota > 0))
-            && token["model_limits_enabled"] == false
-            && token["allow_ips"].as_str().is_none_or(|ips| ips.is_empty())
-    })
-}
-
-async fn prepare_group(
-    client: &Client,
-    uid: u64,
-    group: &str,
-    tokens: &mut Vec<Value>,
-) -> Result<Vec<(&'static str, Provider)>, String> {
-    if reusable_token(tokens, group, chrono::Utc::now().timestamp()).is_none() {
-        api(
-            client,
-            Method::POST,
-            "/api/token/",
-            Some(json!({
-                "name": token_name(group), "group": group, "expired_time": -1,
-                "unlimited_quota": true, "remain_quota": 0,
-                "model_limits_enabled": false, "model_limits": "", "allow_ips": "",
-            })),
-        )
-        .await?;
-        *tokens = list_tokens(client).await?;
-    }
-    let token =
-        reusable_token(tokens, group, chrono::Utc::now().timestamp()).ok_or("未找到分组令牌")?;
-    let id = token["id"].as_u64().ok_or("令牌 ID 无效")?;
-    // The list endpoint masks keys; always call the authenticated key endpoint.
-    let key = api(client, Method::POST, &format!("/api/token/{id}/key"), None).await?;
-    let key = key["key"]
-        .as_str()
-        .filter(|key| !key.is_empty() && !key.contains('*'))
-        .ok_or("未取得完整 API Key")?;
-    let key = if key.starts_with("sk-") {
-        key.to_string()
-    } else {
-        format!("sk-{key}")
-    };
-    // Do not send Gateway session cookies to model discovery: only this group's API key.
-    let model_client = Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .timeout(Duration::from_secs(30))
-        .build()
-        .map_err(|_| "无法创建模型客户端")?;
-    let response = model_client
-        .get(format!("{GATEWAY}/v1/models"))
-        .bearer_auth(&key)
-        .send()
-        .await
-        .map_err(|_| "无法读取分组模型")?;
-    if !response.status().is_success() {
-        return Err("无法读取分组模型".into());
-    }
-    let models: Value = response.json().await.map_err(|_| "分组模型格式无效")?;
-    let mut models: Vec<String> = models["data"]
-        .as_array()
-        .ok_or("分组模型格式无效")?
-        .iter()
-        .filter_map(|model| model["id"].as_str().map(str::to_string))
-        .collect();
-    models.sort();
-    Ok(build_providers(uid, group, &key, &models))
 }
 
 fn build_providers(
@@ -458,28 +402,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn callback_requires_origin_nonce_and_positive_uid() {
-        let parse = |s: &str| url::Url::parse(s).unwrap();
-        assert_eq!(
-            callback_uid(
-                &parse(&format!("{GATEWAY}{CALLBACK_PATH}?state=nonce&uid=42")),
-                "nonce"
-            ),
-            Some(42)
-        );
-        for bad in [
-            format!("https://evil.example{CALLBACK_PATH}?state=nonce&uid=42"),
-            format!("http://gateway.happy-token.cn{CALLBACK_PATH}?state=nonce&uid=42"),
-            format!("{GATEWAY}{CALLBACK_PATH}?state=wrong&uid=42"),
-            format!("{GATEWAY}{CALLBACK_PATH}?state=nonce&uid=0"),
-            format!("{GATEWAY}{CALLBACK_PATH}?state=nonce&uid=abc"),
-            format!("{GATEWAY}/dashboard?state=nonce&uid=42"),
-        ] {
-            assert_eq!(callback_uid(&parse(&bad), "nonce"), None);
-        }
-    }
-
-    #[test]
     fn all_groups_have_distinct_stable_account_scoped_provider_ids() {
         let models = vec!["gpt-5.6".to_string()];
         let default = build_providers(42, "default", "sk-test", &models);
@@ -532,27 +454,39 @@ mod tests {
     }
 
     #[test]
-    fn only_valid_unrestricted_owned_group_tokens_are_reused() {
-        let valid = json!({"id": 1, "name": token_name("Pro"), "group": "Pro", "status": 1,
-            "expired_time": -1, "unlimited_quota": true, "model_limits_enabled": false, "allow_ips": ""});
-        assert!(reusable_token(&[valid.clone()], "Pro", 100).is_some());
-        assert!(reusable_token(&[valid.clone()], "Default", 100).is_none());
-        for (field, value) in [
-            ("name", json!("User's existing token")),
-            ("status", json!(2)),
-            ("expired_time", json!(50)),
-            ("model_limits_enabled", json!(true)),
-            ("allow_ips", json!("127.0.0.1")),
-        ] {
-            let mut invalid = valid.clone();
-            invalid[field] = value;
-            assert!(reusable_token(&[invalid], "Pro", 100).is_none());
-        }
-        let mut exhausted = valid;
-        exhausted["unlimited_quota"] = json!(false);
-        exhausted["remain_quota"] = json!(0);
-        assert!(reusable_token(&[exhausted], "Pro", 100).is_none());
-        assert!(token_name(&"很长的分组".repeat(100)).len() <= 50);
+    fn browser_grants_and_snapshots_reject_untrusted_values() {
+        let verifier = URL_SAFE_NO_PAD.encode([7u8; 32]);
+        assert_eq!(verifier.len(), 43);
+        assert_eq!(challenge(&verifier).len(), 43);
+        assert_ne!(challenge(&verifier), verifier);
+        let mut grant = BrowserGrant {
+            id: "a".repeat(32),
+            code: "1234ABCD".into(),
+            expires_in: 600,
+        };
+        assert!(valid_grant(&grant));
+        grant.id = "https://evil.test".into();
+        assert!(!valid_grant(&grant));
+        let mut snapshot = Snapshot {
+            uid: 42,
+            account: "Test".into(),
+            groups: vec![GroupSnapshot {
+                name: "default".into(),
+                key: "sk-test".into(),
+                models: vec!["gpt-5".into()],
+            }],
+            warnings: vec![],
+        };
+        assert!(validate_snapshot(&snapshot).is_ok());
+        snapshot.groups[0].key = "sk-****".into();
+        assert!(validate_snapshot(&snapshot).is_err());
+        snapshot.groups[0].key = "sk-test".into();
+        snapshot.groups.push(GroupSnapshot {
+            name: "default".into(),
+            key: "sk-test".into(),
+            models: vec![],
+        });
+        assert!(validate_snapshot(&snapshot).is_err());
     }
 
     #[test]

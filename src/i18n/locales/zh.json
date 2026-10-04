@@ -4553,6 +4553,13 @@
     "help": "登录后自动导入账户全部可用编程模型分组；选择分组即可启用",
     "account": "当前账户：{{account}}。点击重新登录并同步分组。",
     "synced": "已同步 {{count}} 项配置：{{groups}}。选择分组即可启用。",
-    "openFailed": "无法打开 HappyToken 登录窗口，请重试"
+    "openFailed": "无法打开浏览器授权，请检查网络或确认网关已发布桌面授权功能",
+    "browserTitle": "在浏览器完成 HappyToken 登录",
+    "browserHelp": "浏览器已打开。确认授权页面上的验证码与下方一致，再允许同步。",
+    "code": "授权验证码",
+    "waiting": "等待浏览器授权，最多等待 10 分钟。",
+    "reopen": "重新打开浏览器",
+    "cancel": "取消登录",
+    "cancelFailed": "取消失败，请重试"
   }
 }

@@ -9,7 +9,7 @@
 - 维护根 `CONTEXT.md` 和本说明，减少后续重复沟通。
 - 用户要求直接提交到 happy-token/main，不使用 PR，也不向官方上游提交 PR。此前 draft PR #1 仅创建在 happy-token fork 内，已关闭；登录代码与文档已直接推送到 main。
 - 用户授权 macOS 本机签名与公证复用上级 config 的 HappyRouter 凭证；不将真实凭证复制到项目或提交到 Git。
-- 当前授权为修改项目仓库及本机签名打包；生产部署、Casdoor 应用设置、网关服务配置不在范围内。
+- 用户已授权同时修改 HappySwitch 与 HappyAPIWeb/gateway-sso 源码，实现浏览器授权；生产部署与 Casdoor 应用设置仍未授权。
 
 ## 已查明的依据（2026-10-04）
 
@@ -27,18 +27,21 @@
 - 模型 API：用对应分组 Key 调用 `GET /v1/models`。
 - 协议依据：[NewAPI rc.21 路由](https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.21/router/api-router.go)、[令牌接口](https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.21/controller/token.go)。
 
-## 实现约束
+## 当前实现约束
 
-- 外部登录网页不授予 Tauri IPC 权限，保留现有仅 main 窗口的 capability；额外在应用 invoke handler 拒绝登录窗口调用所有应用命令（Tauri 默认应用命令未受 capability 限制）。
-- 登录回调只带一次性随机 state 和已验证的用户 ID；URL、日志和前端事件不携带 Cookie 或 API Key。
-- 后端读取 Gateway Cookie，再次验证 `/api/user/self` 的账户 ID。
-- Cookie 请求只发固定 Gateway origin，禁止自动跟随重定向；模型发现使用独立客户端，仅携带分组 API Key。
-- 只创建 HappySwitch 专用令牌，按分组复用；不改变用户其他令牌。
-- 专用令牌无独立额度上限、无到期时间，仍受账户余额和分组权限约束。用户可在网关撤销。
-- 按每组返回的模型生成 Claude Code、Codex、Gemini 配置；不编造不可用模型。仅图片等非编程模型的分组报告跳过原因。
-- 配置 ID 包含网关用户、分组和助手类型，重复同步不重复添加，切换账户不覆盖另一账户配置。
-- 重复同步保留用户编辑过的配置，只刷新 Key；已启用的配置通过现有供应商更新服务刷新当前 CLI 配置；不会删除网关移除分组所对应的历史配置。
-- API Key 按 CC Switch 原有机制保存在本地供应商库，启用时写入 CLI 配置。登录同步事件只返回数量、账户名称和同步结果；供应商编辑器沿用上游的 API Key 显示与管理行为。
+- 默认浏览器完成 Gateway/Casdoor 登录与明确的 HappySwitch 授权确认；不再创建内置登录 WebView。
+- 本机生成 43 字符随机 verifier，只向网关提交 SHA-256/base64url challenge；浏览器 URL 仅包含随机请求 ID，不携带 Cookie、verifier 或 API Key。
+- 授权页显示已验证的网关账户、验证码与将执行的分组令牌同步范围；用户应核对桌面端相同验证码后确认。
+- 创建、轮询、取消接口拒绝浏览器 Origin/Sec-Fetch-Site 请求；确认接口要求同源 Origin，验证 Cookie 对应 `/api/user/self` 的 ID，拒绝跨站请求。
+- 授权记录由独立 SQLite Durable Object 保存，10 分钟到期并通过 alarm 清理；创建按 IP 哈希限流（每分钟 10 次），每个请求的轮询间隔至少 1 秒。
+- 兑换要求原 verifier 且只允许一次；消费、取消、审批占用使用事务，重复或并发领取仅一个成功。
+- 浏览器 Cookie 仅用于网关侧固定同源 API 调用，不写入授权存储、不返回桌面端；不跟随重定向。
+- 网关在用户确认后只创建/复用 HappySwitch 专用分组令牌，不改变其他令牌；密钥接口取得完整值，独立无 Cookie 请求发现分组模型。
+- 授权快照使用与 SSO_FLOW_SECRET 域隔离派生的 AES-GCM 密钥加密保存；兑换或取消后清除快照，过期清除记录。底层平台备份可能保留历史密文，不将应用层删除表述为平台物理擦除。
+- 只处理当前账户实际可用分组，最多 32 个；快照大小最多 90,000 字节，避免 Durable Object 单值上限。未知或图片等非编程模型的分组报告跳过原因。
+- API Key 按原有机制保存到本地供应商库；桌面端事件仅返回账户名称、数量、分组和警告。供应商编辑器沿用上游显示与管理行为。
+- 配置 ID 包含用户、分组和助手类型；重复同步保留用户编辑、刷新 Key；已启用配置通过既有服务刷新当前 CLI。不会删除网关移除分组对应的历史配置。
+- 登录等待界面显示验证码、重新打开浏览器和取消入口；最多 10 分钟，成功后刷新列表。新导入仍由用户手动启用。
 
 ## 尚待用户决定
 
@@ -93,23 +96,13 @@
 - 提交现有 arm64 DMG，Apple 返回 Accepted，提交 ID 为 `76163a49-b9ec-4282-85ee-e974ff2753de`。
 - DMG 与本地 .app 的公证票据均已装订；DMG 票据验证通过，本地 .app 的签名验证与 Gatekeeper 检查通过。
 
-## 浏览器登录需求与待实现方案
+## 浏览器登录实现与验证（2026-10-04）
 
-### 用户已确认
-
-- 用户希望登录在默认浏览器完成，使用浏览器的自动填充，体验类似 Codex / Claude Code。当前仍是内置 WebView；该需求尚未实现。
-
-### 已查明的限制
-
-- `../HappyAPIWeb/gateway-sso/src/target-policy.ts` 仅允许 `/dashboard`、`/wallet`、`/keys`、`/profile` 回跳。
-- `callback-page.ts` 在 Gateway origin 建立 Cookie 会话并写入浏览器 localStorage；桌面端不能读取系统浏览器 Cookie。单纯打开浏览器不能替代当前登录后自动同步。
-
-### 实现方案（待跨仓库范围确认）
-
-- 桌面端生成随机请求与 PKCE 校验数据，在默认浏览器打开 Gateway 专用桌面授权页面。
-- 页面复用现有 SSO，明确展示授权给 HappySwitch 的分组同步操作，用户确认后完成授权。
-- 网关保存短期授权记录，桌面端使用只在本地保留的验证数据轮询并一次性兑换；不把 Cookie 或 API Key 放入回跳 URL，不暴露 Casdoor 客户端密钥。
-- 优先采用设备授权式轮询，避免通用外部重定向或浏览器向 localhost 传递凭证；需明确过期、取消、重复兑换拒绝与账户绑定。
-- 网关只为该已验证账户执行既有分组/专用令牌同步操作，并通过认证的兑换响应交接所需配置；保持用户手动启用分组的当前策略。
-- 桌面端提供等待浏览器、重新打开、取消与失败重试状态，保留安全且明确的超时。
-- 需要修改 HappySwitch 与 gateway-sso；本次没有更改生产网关、Casdoor 配置或部署。跨仓库源代码范围已向用户询问。
+- 用户同意跨仓库开发；HappySwitch 已改为默认浏览器，gateway-sso 增加 `/sso/desktop` 与 start/approve/poll/cancel 接口。
+- 桌面旧内置登录脚本与对应桥接测试已删除；旧 macOS 安装包和当前运行的本地测试进程仍为此前内置登录版本，不能当作新功能产物。
+- 本轮前端类型检查、renderer 构建、等待窗口 4 项交互测试通过；Rust release cargo check 通过，Rust 定向测试 4 项通过。
+- gateway-sso 工作区 59 项测试通过（含本轮 6 项协议测试及用户此前未提交的测试）；从独立的已提交版本复查 58 项测试通过，TypeScript 检查与 Wrangler dry-run 打包通过。部署应使用该独立提交版本，保留工作区用户既有修改。
+- Workerd/Miniflare SQLite Durable Object 实际运行验证了创建、授权页、pending、取消与拒绝已取消兑换。
+- 浏览器本地模拟账户授权页可显示当前账户、验证码和授权范围，确认后显示返回 HappySwitch 提示；模拟验证不代表真实网关 Cookie、令牌同步或真实账户链路已通过。
+- HappyAPIWeb 根 TypeScript 检查与 Next.js 构建通过；未改官网页面，不将 Worker 页验证视为官网全部交互回归。
+- 未部署 Worker，未改变生产 Casdoor 或网关配置；真实浏览器登录仍等待发布。部署与回滚见 `../HappyAPIWeb/gateway-sso/DESKTOP_LOGIN.md`。

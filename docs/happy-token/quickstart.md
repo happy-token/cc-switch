@@ -43,3 +43,9 @@ pnpm tauri build --debug --bundles app
 代码直接提交至 `happy-token/main`；不创建 PR、不向官方上游提交 PR。本机签名打包不会自动创建 GitHub Release。
 
 本轮 arm64 Release 已完成 Developer ID 签名、Apple 公证和票据装订，DMG 票据验证及应用 Gatekeeper 检查通过。产物为 `src-tauri/target/release/bundle/dmg/HappySwitch_3.20.4_aarch64.dmg`。此前协议 403 已解除；没有自动发布 GitHub Release。
+
+## 浏览器授权版本
+
+最新源码在默认浏览器完成登录与授权。桌面端显示验证码，浏览器确认相同验证码与当前账户后点击“允许并同步分组”；无需在内置窗口输入密码。可以重新打开浏览器或取消，授权最长 10 分钟。
+
+这要求 gateway-sso 的桌面授权接口先发布。当前已公证的 3.20.4 包仍为此前内置登录版本；新源码已完成本地验证，但尚未部署新接口或生成新签名安装包。
