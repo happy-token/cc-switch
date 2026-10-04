@@ -7,7 +7,7 @@
 - 用户提及 Default、Pro、GPT Web；不硬编码分组名，不把未授权分组当作可用分组。
 - 复用 HappyImage / HappyServices 的账户体系，不创建另一套账户密码。
 - 维护根 `CONTEXT.md` 和本说明，减少后续重复沟通。
-- 用户要求直接提交到 happy-token/main，不使用 PR，也不向官方上游提交 PR。此前 draft PR 仅创建在 happy-token fork 内，正在关闭。
+- 用户要求直接提交到 happy-token/main，不使用 PR，也不向官方上游提交 PR。此前 draft PR #1 仅创建在 happy-token fork 内，已关闭；登录代码与文档已直接推送到 main。
 - 用户授权 macOS 本机签名与公证复用上级 config 的 HappyRouter 凭证；不将真实凭证复制到项目或提交到 Git。
 - 当前授权为修改项目仓库及本机签名打包；生产部署、Casdoor 应用设置、网关服务配置不在范围内。
 
@@ -69,4 +69,7 @@
 - Apple Developer ID 签名/公证凭证与 Tauri 自动更新签名密钥是不同用途；本次复用前者，自动更新仍保持关闭。
 - 构建命令为 `pnpm tauri build --bundles app,dmg`，仅生成本机包，不自动发布 GitHub Release。
 - 依据：[Tauri macOS 签名文档](https://v2.tauri.app/distribute/sign/macos/)、上级 config 的 macOS 发布说明。
-- 当前签名、公证与 Gatekeeper 检查结果待本轮构建完成后更新。
+- arm64 Release 编译完成，`HappySwitch.app` 的 `codesign --verify --deep --strict` 验证通过。
+- Apple 公证返回 HTTP 403：开发者团队有未签署或已过期的协议；需要账户持有人在 Apple Developer 账户处理协议后再重试公证。构建凭证未写入仓库。
+- 由于公证阶段中断 Tauri 打包，使用 `hdiutil` 生成本机 DMG 并以同一 Developer ID 签名；产物位于 `src-tauri/target/release/bundle/dmg/HappySwitch_3.20.4_aarch64.dmg`。
+- DMG 的 `codesign --verify` 与 `hdiutil verify` 均通过；`stapler validate` 确认应用无公证票据，`spctl --assess` 返回 `Unnotarized Developer ID`。当前不能通过 Gatekeeper 分发检查；本次没有发布 GitHub Release。

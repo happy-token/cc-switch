@@ -33,3 +33,13 @@ pnpm tauri build --debug --bundles app
 ```
 
 构建桌面应用不等于已经通过真实账户登录和模型调用验证。验证边界记录在[实现说明](implementation.md)。
+
+## 正式 macOS 包
+
+用户已授权复用上级 `config/env/env.shared` 的 HappyRouter 公证凭证，以及本机 Keychain 的 Developer ID Application 签名证书。仅在构建进程中加载 `APPLE_ID`、`APPLE_TEAM_ID`、`APPLE_SIGNING_IDENTITY`、`APPLE_PASSWORD`；不把凭证值写进 `.env`、文档或版本库。
+
+正式构建使用 `pnpm tauri build --bundles app,dmg`。完成后检查 Developer ID 签名、Apple 公证票据和 Gatekeeper 结果。本机默认产物为 Apple Silicon（arm64）。
+
+代码直接提交至 `happy-token/main`；不创建 PR、不向官方上游提交 PR。本机签名打包不会自动创建 GitHub Release。
+
+本轮 Release 应用已通过 Developer ID 签名验证，但 Apple 公证返回 403（团队协议未签署或已过期）。本机 DMG 已签名，尚未公证。账户持有人应在 [Apple Developer 账户](https://developer.apple.com/account/) 完成协议处理，再重新公证和装订票据；当前产物不能视为通过 Gatekeeper 的正式分发包。
