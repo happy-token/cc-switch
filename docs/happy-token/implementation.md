@@ -80,3 +80,8 @@
 - 本轮使用的 Apple ID、Team ID 与 HappyRouter 应用专用密码经本地比对均一致；没有把这些值输出到日志或文档。Tauri 的 `APPLE_PASSWORD` 对应 Electron 的 `APPLE_APP_SPECIFIC_PASSWORD`。
 - 绕过 Tauri，直接使用 HappyRouter、HappyCode、TokenUsage 各自的本地凭证执行只读 `notarytool history`，三者均返回相同的协议 HTTP 403。错误不是 HappySwitch 独有，也不依赖其 Bundle ID。
 - Apple 返回的错误指向团队协议/账户资格；尚未登录开发者后台核实具体协议，不能确定是尚未签署、过期，还是 Apple 后台状态未同步。历史项目采用何种流程已确认，但过去每个安装包是否公证成功未核实。
+
+### 用户同意协议后的复查（2026-10-04）
+
+- 用户确认已同意协议。使用原 HappyRouter 凭证重查 `notarytool history` 并直接提交已签名 DMG，两次均仍返回同一协议 HTTP 403，尚未获得公证提交 ID。
+- 已同意协议是用户确认；Apple 公证服务当前仍拒绝请求是实测事实。是否存在状态同步延迟、其他待签协议或团队账户资格问题，尚未确认；不据此断言用户未签署协议。
