@@ -25,7 +25,7 @@ jobs:
           - name: macOS Universal
             os: macos-14
             target: universal-apple-darwin
-            bundles: dmg
+            bundles: app,dmg
           - name: Windows x64
             os: windows-2022
             target: x86_64-pc-windows-msvc
@@ -54,6 +54,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          cache-on-failure: true
           key: ${{ matrix.target }}
       - name: Import Apple certificate
         if: runner.os == 'macOS' && inputs.sign_macos
