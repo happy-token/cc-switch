@@ -10,6 +10,7 @@
 - 用户要求直接提交到 happy-token/main，不使用 PR，也不向官方上游提交 PR。此前 draft PR #1 仅创建在 happy-token fork 内，已关闭；登录代码与文档已直接推送到 main。
 - 用户授权 macOS 本机签名与公证复用上级 config 的 HappyRouter 凭证；不将真实凭证复制到项目或提交到 Git。
 - 用户已授权同时修改 HappySwitch 与 HappyAPIWeb/gateway-sso 源码，实现浏览器授权；生产部署与 Casdoor 应用设置仍未授权。
+- 用户随后授权使用 HappyServices 中的真实账户进行验证；此授权覆盖账户测试，未授权生产 Worker 发布。
 
 ## 已查明的依据（2026-10-04）
 
@@ -70,6 +71,17 @@
 - gateway-sso 工作区 61 项测试与类型检查通过；新增货币换算测试，授权兑换测试验证余额/消费快照。Wrangler dry-run 通过，HappyAPIWeb 根类型检查与构建通过。
 - 本轮桌面提交 d312897e、网关提交 762e021 均已直接推送各自 main；网关独立已提交副本的 60 项测试、类型检查与 dry-run 通过，未混入用户既有 start-page.ts / worker.test.ts 修改。此前浏览器版安装包及其源码提交记录是历史产物，不包含本轮账户菜单。
 - 真实账户金额、充值跳转和浏览器授权端到端未验证，生产 Worker 未部署；此前 macOS 包不包含本轮账户入口改动。
+
+### 真实账户检查（2026-10-04）
+
+- HappyServices 根 .env 存在 Casdoor 管理员配置，未找到专用普通测试账户凭证；仅检查配置存在，不输出或复制其值。
+- 本次复用 Chrome 已有真实管理员会话，通过实际账户菜单确认身份；未使用配置密码重新登录，不能表述为密码登录验证通过。
+- 与桌面菜单相同的控制台和充值 SSO 链接分别到达 /dashboard/overview、/wallet；两个页面余额和累计消费显示一致。只查看钱包，不提交充值或支付。
+- 只读查看现有令牌列表，确认存在 default、gpt-pro、gpt-web 等分组令牌；这不是 /api/user/self/groups 的完整权限验证。未读取完整 API Key、未创建、修改或删除令牌。
+- 公开 /api/status 的版本仍为 v1.0.0-rc.21，货币展示为 CNY，并提供换算参数；实际账户页面单位与现有换算设计一致，尚未验证原始账户 API 数值到桌面浮层的传递。
+- 原生形式 POST /sso/desktop/start 使用随机 challenge 探测，线上返回 HTTP 404，未生成授权请求。完整 HappySwitch 浏览器授权、分组 Key 导入与账户金额同步仍待 Worker 发布后验证；不能用上述只读验证替代端到端通过。
+- 最新源码已用 `pnpm tauri build --no-bundle --ci` 完成 release 构建，包含左下角账户入口；本地测试副本使用 HappyRouter 对应 Developer ID 签名，严格签名校验通过，本轮未重新公证或生成 DMG。
+- 原生测试副本位于用户 Library/Application Support 下的 HappySwitch-real-account-test，使用独立 `CC_SWITCH_TEST_HOME`。实际启动后确认主界面与设置页均有左下角登录入口；点击后请求失败，与线上 start 接口 404 一致。既有安装包与用户配置未覆盖。
 
 登录后自动启用策略：已询问是否首次启用 Default、后续保留用户选择，或仅导入后手动启用。暂按仅导入、由用户选择分组启用实现；收到答复后更新本节和实现。
 
