@@ -92,3 +92,24 @@
 - 复查 `notarytool history` 成功，协议 403 已解除；不能仅凭前后状态确定具体是哪份协议导致原错误。
 - 提交现有 arm64 DMG，Apple 返回 Accepted，提交 ID 为 `76163a49-b9ec-4282-85ee-e974ff2753de`。
 - DMG 与本地 .app 的公证票据均已装订；DMG 票据验证通过，本地 .app 的签名验证与 Gatekeeper 检查通过。
+
+## 浏览器登录需求与待实现方案
+
+### 用户已确认
+
+- 用户希望登录在默认浏览器完成，使用浏览器的自动填充，体验类似 Codex / Claude Code。当前仍是内置 WebView；该需求尚未实现。
+
+### 已查明的限制
+
+- `../HappyAPIWeb/gateway-sso/src/target-policy.ts` 仅允许 `/dashboard`、`/wallet`、`/keys`、`/profile` 回跳。
+- `callback-page.ts` 在 Gateway origin 建立 Cookie 会话并写入浏览器 localStorage；桌面端不能读取系统浏览器 Cookie。单纯打开浏览器不能替代当前登录后自动同步。
+
+### 实现方案（待跨仓库范围确认）
+
+- 桌面端生成随机请求与 PKCE 校验数据，在默认浏览器打开 Gateway 专用桌面授权页面。
+- 页面复用现有 SSO，明确展示授权给 HappySwitch 的分组同步操作，用户确认后完成授权。
+- 网关保存短期授权记录，桌面端使用只在本地保留的验证数据轮询并一次性兑换；不把 Cookie 或 API Key 放入回跳 URL，不暴露 Casdoor 客户端密钥。
+- 优先采用设备授权式轮询，避免通用外部重定向或浏览器向 localhost 传递凭证；需明确过期、取消、重复兑换拒绝与账户绑定。
+- 网关只为该已验证账户执行既有分组/专用令牌同步操作，并通过认证的兑换响应交接所需配置；保持用户手动启用分组的当前策略。
+- 桌面端提供等待浏览器、重新打开、取消与失败重试状态，保留安全且明确的超时。
+- 需要修改 HappySwitch 与 gateway-sso；本次没有更改生产网关、Casdoor 配置或部署。跨仓库源代码范围已向用户询问。
