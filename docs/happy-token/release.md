@@ -23,3 +23,11 @@ HappyToken 网站添加独立 HappySwitch 下载入口，保留官方原版 CC S
 用户要求 GitHub Actions 验证并发布 Release，已允许将 HappyRouter 对应 Apple 签名/公证凭据保存为该仓库 Actions Secrets。首版定为 3.20.5。初轮 Windows 发现 PowerShell 逗号参数解析问题，已切换 Bash；正式构建 37212480889 运行中，尚不能宣称成功或发布完成。
 
 CI 全量测试发现分组清理绕过统一当前供应商入口，已改用 mode::current::is_referenced，保护设备直连指针、数据库引用和代理路由。需等待修正提交的 CI 与最终构建，旧产物不用于发布。
+
+## 验证与发布结果（2026-10-05）
+
+最终构建提交 `371918a4532cdc30decf0b95d86c76a526b170e7`。常规 CI [37214518101](https://github.com/happy-token/cc-switch/actions/runs/37214518101) 全部通过，包括三平台后端全量测试、前端检查及 Windows/WSL2 契约测试。安装包构建 [37214521009](https://github.com/happy-token/cc-switch/actions/runs/37214521009) 两平台通过；macOS 应用和 DMG 签名、公证与 stapler 检查通过。
+
+[HappySwitch 3.20.5](https://github.com/happy-token/cc-switch/releases/tag/happy-v3.20.5) 已正式发布：Universal DMG、Windows x64 MSI/EXE 和平台 SHA256SUMS。下载同次 Actions 产物后逐文件核对 SHA-256，上传 Release 后核对资产身份与摘要。Windows 未做 Authenticode 签名；Windows ARM64 未验证。网站下载专区正在验证，尚未生产部署。
+
+发布过程修正了 Windows 逗号参数的 PowerShell 解析、Rust 格式检查、旧分组清理的当前供应商读取入口，以及 Tauri 只打 DMG 时清理中间 app 导致校验失败的问题。最终同时保留 app/dmg 校验，不绕过任何签名或公证检查。CI 不再中断正在运行的检查，避免多次流水线修正丢失测试与缓存。

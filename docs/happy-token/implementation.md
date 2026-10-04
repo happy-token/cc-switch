@@ -281,3 +281,6 @@ C 方案已实现：沿用 quiet 按钮与原生命令，金额不再放大，�
 
 
 发布验证见 [release.md](release.md)：跨平台 Actions 手动构建，macOS Developer ID 签名、公证及 stapler 校验，Windows MSI/NSIS；网站需独立区分 HappySwitch fork 与上游原版。验证状态以实际 Actions 结果更新，不把启动构建视为已通过。
+
+
+2026-10-05：跨平台 CI 与 macOS/Windows 安装包构建通过，正式 Release 为 HappySwitch 3.20.5。分组清理改用 mode::current::is_referenced，保留设备直连、数据库和代理路由引用的供应商；全量测试通过。具体构建、签名、公证与网站上线状态见 [发布验证记录](release.md)。
