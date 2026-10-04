@@ -62,3 +62,6 @@ _避免_：供应商（分组和 CC Switch 配置并非同一实体）。
 
 
 用户要求同步提示精简：同类提示合并、去重；保留真实失败与需要操作的提示，工具验收说明留在协议文档。兼容生产 Worker 旧长文案，不为改提示额外部署。Pi 协议警告改按实际 settings.api 判断，避免原写入器省略 apiFormat 导致误报。
+
+
+用户要求更新自动配置默认模型：版本优先于 codex/coder 名称标签，同代优先常规主力 Sol/Sonnet；只在当前分组目录且协议已声明的候选中选择。当前候选默认 Default Claude=claude-sonnet-5、Default Codex=gpt-5.6-sol、Pro Codex=gpt-6-sol。不写入目录未提供或协议未知的新型号，不覆盖手动修改过的模型；追加型客户端仍由原应用管理默认选择。

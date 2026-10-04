@@ -82,16 +82,41 @@ fn available(group: &GroupSnapshot, protocol: Protocol) -> Vec<&String> {
     models
 }
 
+// Compare version numbers before coding suffixes: a legacy Codex alias must not
+// outrank a newer general model. Only candidates with declared protocols reach here.
+fn model_rank(model: &str, family: &str) -> (bool, Vec<u32>, bool, u8, bool, String) {
+    let name = model.to_ascii_lowercase();
+    let version = name
+        .split(|c: char| !c.is_ascii_digit())
+        .filter(|part| !part.is_empty())
+        .filter_map(|part| part.parse::<u32>().ok())
+        .take_while(|number| *number < 100)
+        .take(2)
+        .collect();
+    let primary = if name.contains("sonnet") || name.ends_with("-sol") {
+        4
+    } else if name.contains("opus") || name.ends_with("-astra") {
+        3
+    } else if name.contains("luna") || name.contains("haiku") {
+        0
+    } else {
+        2
+    };
+    (
+        name.starts_with(family),
+        version,
+        !name.contains("nano") && !name.contains("mini"),
+        primary,
+        name.contains("codex") || name.contains("coder") || name.contains("code"),
+        name,
+    )
+}
+
 fn preferred<'a>(models: &[&'a String], family: &str) -> Option<&'a String> {
-    models.iter().copied().max_by_key(|model| {
-        let name = model.to_ascii_lowercase();
-        (
-            name.starts_with(family),
-            name.contains("codex") || name.contains("coder") || name.contains("code"),
-            !name.contains("nano") && !name.contains("mini"),
-            name,
-        )
-    })
+    models
+        .iter()
+        .copied()
+        .max_by_key(|model| model_rank(model, family))
 }
 
 fn identity(uid: u64, group: &str, app: &str, protocol: Option<Protocol>) -> String {
@@ -439,6 +464,48 @@ mod tests {
         assert_eq!(
             find(&providers, "opencode").settings_config["npm"],
             "@ai-sdk/openai"
+        );
+    }
+    #[test]
+    fn newer_versions_outrank_legacy_coding_aliases() {
+        let providers = build_providers(
+            42,
+            &group(
+                "gpt-pro",
+                &[
+                    ("gpt-5.3-codex", Protocol::Responses),
+                    ("gpt-5.6-sol", Protocol::Responses),
+                    ("gpt-6-astra", Protocol::Responses),
+                    ("gpt-6-luna", Protocol::Responses),
+                    ("gpt-6-sol", Protocol::Responses),
+                ],
+            ),
+        );
+        let config = find(&providers, "codex").settings_config["config"]
+            .as_str()
+            .unwrap()
+            .parse::<toml::Value>()
+            .unwrap();
+        assert_eq!(config["model"].as_str(), Some("gpt-6-sol"));
+        let candidates = ["gpt-9".to_string(), "gpt-10".to_string()];
+        assert_eq!(
+            preferred(&candidates.iter().collect::<Vec<_>>(), "gpt-").map(String::as_str),
+            Some("gpt-10")
+        );
+        let claude = build_providers(
+            42,
+            &group(
+                "default",
+                &[
+                    ("claude-sonnet-4-6", Protocol::Chat),
+                    ("claude-opus-5", Protocol::Chat),
+                    ("claude-sonnet-5", Protocol::Chat),
+                ],
+            ),
+        );
+        assert_eq!(
+            find(&claude, "claude").settings_config["env"]["ANTHROPIC_MODEL"],
+            "claude-sonnet-5"
         );
     }
     #[test]
