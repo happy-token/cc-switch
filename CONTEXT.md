@@ -82,7 +82,7 @@ _避免_：供应商（分组和 CC Switch 配置并非同一实体）。
 用户已选择 C 传统设置面板。已应用到左下角账户入口：账户标题、身份、常规金额行、账户服务（充值/控制台）、本地配置（更新配置）、独立退出及简短同步时间；保持单栏，不新增账户设置页面。
 
 
-用户要求通过 GitHub Actions 验证 macOS/Windows 并生成 HappySwitch Release，供官网提供下载。已明确授权将 HappyRouter 对应 Apple 签名证书/公证凭据保存到本仓库 Secrets，仅供签名公证。首版 3.20.5，macOS Universal 和 Windows x64；Windows ARM64 尚未验证。发布流程见 [release.md](docs/happy-token/release.md)。网站生产上线尚未授权。
+用户要求通过 GitHub Actions 验证 macOS/Windows 并生成 HappySwitch Release，供官网提供下载。已明确授权将 HappyRouter 对应 Apple 签名证书/公证凭据保存到本仓库 Secrets，仅供签名公证。首版 3.20.5，macOS Universal 和 Windows x64；Windows ARM64 尚未验证。发布流程见 [release.md](docs/happy-token/release.md)。网站生产上线于 2026-10-05 获明确授权并完成。
 
 
-2026-10-05：HappySwitch 3.20.5 已通过 GitHub Actions 两平台安装包构建及全量 CI，并正式发布 Release（happy-v3.20.5，构建提交 371918a4）。macOS Universal 已签名、公证；Windows x64 MSI/EXE 未做代码签名，ARM64 未验证。官网独立下载专区已填入真实产物，生产部署仍待明确授权。完整证据见 docs/happy-token/release.md。
+2026-10-05：HappySwitch 3.20.5 已通过 GitHub Actions 两平台安装包构建及全量 CI，并正式发布 Release（happy-v3.20.5，构建提交 371918a4）。macOS Universal 已签名、公证；Windows x64 MSI/EXE 未做代码签名，ARM64 未验证。官网独立下载专区已填入真实产物，生产部署已获明确授权并完成；下载页 https://happy-token.cn/zh/downloads。完整证据见 docs/happy-token/release.md。

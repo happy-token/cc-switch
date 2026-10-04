@@ -284,3 +284,6 @@ C 方案已实现：沿用 quiet 按钮与原生命令，金额不再放大，�
 
 
 2026-10-05：跨平台 CI 与 macOS/Windows 安装包构建通过，正式 Release 为 HappySwitch 3.20.5。分组清理改用 mode::current::is_referenced，保留设备直连、数据库和代理路由引用的供应商；全量测试通过。具体构建、签名、公证与网站上线状态见 [发布验证记录](release.md)。
+
+
+2026-10-05：用户明确授权官网生产上线。HappyAPIWeb 提交 7152ad5c 的已验证 OpenNext 构建已部署至 happy-api-web-next，版本 7fcf4d22-bac6-4d92-b783-72ab2ccc0849。中英文下载页与原有首页/博客/模型/定价检查通过，三个 HappySwitch 3.20.5 安装包公开链接 HTTP 200；浏览器确认下载卡片和原版 CC Switch/Codex 入口保留。此次没有部署 Gateway 或 installer-sync。
