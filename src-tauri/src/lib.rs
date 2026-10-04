@@ -331,6 +331,20 @@ async fn update_tray_menu(
     }
 }
 
+// App commands are unrestricted by default in Tauri without an app ACL manifest.
+// The remote login window must never reach any of CC Switch's native commands.
+fn restrict_login_window(
+    handler: impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static,
+) -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
+    move |invoke| {
+        if invoke.message.webview_ref().label() == "happy-token-login" {
+            invoke.resolver.reject("Native commands are disabled in the login window");
+            return true;
+        }
+        handler(invoke)
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // 设置 panic hook，在应用崩溃时记录日志到 <app_config_dir>/crash.log（默认 ~/.cc-switch/crash.log）
@@ -407,6 +421,9 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         // 拦截窗口关闭：根据设置决定是否最小化到托盘
         .on_window_event(|window, event| {
+            if window.label() == "happy-token-login" {
+                return;
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 // 数据库版本过新的恢复模式下没有托盘可唤回，关闭即退出，避免应用隐身后台
                 let in_db_recovery = crate::init_status::get_init_error()
@@ -1375,7 +1392,8 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
+        .invoke_handler(restrict_login_window(tauri::generate_handler![
+            commands::happy_token_login,
             commands::get_providers,
             commands::get_current_provider,
             commands::add_provider,
@@ -1738,7 +1756,7 @@ pub fn run() {
             commands::enter_lightweight_mode,
             commands::exit_lightweight_mode,
             commands::is_lightweight_mode,
-        ]);
+        ]));
 
     let app = builder
         .build(tauri::generate_context!())

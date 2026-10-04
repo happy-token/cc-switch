@@ -4545,5 +4545,14 @@
       "refresh": "残量を更新",
       "refreshAria": "{{login}} の残量を更新"
     }
+  },
+  "happyToken": {
+    "login": "Sign in to HappyToken",
+    "sync": "Sync HappyToken",
+    "syncing": "Syncing groups…",
+    "help": "Sign in to import all available coding model groups, then select a group to activate it.",
+    "account": "Account: {{account}}. Sign in again to sync groups.",
+    "synced": "Synced {{count}} configurations: {{groups}}. Select a group to activate it.",
+    "openFailed": "Could not open HappyToken sign-in. Please retry."
   }
 }

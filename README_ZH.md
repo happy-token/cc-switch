@@ -1,3 +1,5 @@
+> 本仓库由 [happy-token](https://github.com/happy-token/cc-switch) 维护。新增 HappyToken 登录与分组自动配置，详见[项目上下文](CONTEXT.md)和[实现说明](docs/happy-token/implementation.md)。保留上游作者署名与许可证。
+
 <div align="center">
 
 # CC Switch

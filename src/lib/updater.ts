@@ -1,5 +1,8 @@
 import { getVersion } from "@tauri-apps/api/app";
 
+// Enable only after configuring HappyToken-owned signed update endpoints.
+export const AUTOMATIC_UPDATES_ENABLED = false;
+
 export type UpdateChannel = "stable" | "beta";
 
 export interface UpdateInfo {

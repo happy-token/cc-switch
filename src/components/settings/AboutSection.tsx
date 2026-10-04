@@ -1,3 +1,4 @@
+import { AUTOMATIC_UPDATES_ENABLED } from "@/lib/updater";
 import { useCallback, useEffect, useState } from "react";
 import {
   Download,
@@ -80,13 +81,13 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
 
       if (!displayVersion) {
         await settingsApi.openExternal(
-          "https://github.com/farion1231/cc-switch/releases",
+          "https://github.com/happy-token/cc-switch/releases",
         );
         return;
       }
 
       await settingsApi.openExternal(
-        `https://github.com/farion1231/cc-switch/releases/tag/${displayVersion}`,
+        `https://github.com/happy-token/cc-switch/releases/tag/${displayVersion}`,
       );
     } catch (error) {
       console.error("[AboutSection] Failed to open release notes", error);
@@ -95,7 +96,7 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
   }, [t, updateInfo?.availableVersion, version]);
 
   const handleOpenGithub = useCallback(() => {
-    void settingsApi.openExternal("https://github.com/farion1231/cc-switch");
+    void settingsApi.openExternal("https://github.com/happy-token/cc-switch");
   }, []);
 
   const handleCheckUpdate = useCallback(async () => {
@@ -137,6 +138,10 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
     }
 
     try {
+      if (!AUTOMATIC_UPDATES_ENABLED) {
+        await settingsApi.checkUpdates();
+        return;
+      }
       const available = await checkUpdate();
       if (!available) {
         toast.success(t("settings.upToDate"), { closeButton: true });
@@ -250,7 +255,7 @@ export function AboutSection({ isPortable }: AboutSectionProps) {
           {t("settings.releaseNotes")}
         </Button>
         <a
-          href="https://github.com/farion1231/cc-switch"
+          href="https://github.com/happy-token/cc-switch"
           onClick={(event) => {
             event.preventDefault();
             handleOpenGithub();

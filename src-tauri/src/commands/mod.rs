@@ -10,6 +10,7 @@ mod deeplink;
 mod env;
 mod failover;
 mod global_proxy;
+mod happy_token;
 mod hermes;
 mod import_export;
 mod mcp;
@@ -72,3 +73,5 @@ pub use s3_sync::*;
 pub use usage::*;
 pub use webdav_sync::*;
 pub use workspace::*;
+
+pub use happy_token::*;

@@ -1,3 +1,5 @@
+> HappyToken fork: [happy-token/cc-switch](https://github.com/happy-token/cc-switch). HappyToken login and automatic group configuration: [implementation notes](docs/happy-token/implementation.md). Upstream attribution and license are preserved.
+
 <div align="center">
 
 # CC Switch

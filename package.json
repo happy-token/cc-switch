@@ -1,5 +1,5 @@
 {
-  "name": "cc-switch",
+  "name": "happy-switch",
   "version": "3.20.4",
   "description": "All-in-One Assistant for Claude Code, Codex & Gemini CLI",
   "type": "module",
@@ -90,5 +90,10 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "zod": "^4.1.12"
+  },
+  "homepage": "https://github.com/happy-token/cc-switch",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/happy-token/cc-switch.git"
   }
 }

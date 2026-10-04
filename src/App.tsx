@@ -1,3 +1,4 @@
+import { HappyTokenLoginButton } from "@/components/HappyTokenLoginButton";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/lib/toast";
@@ -1102,6 +1103,7 @@ function App() {
             (settingsData?.showProfileSwitcher ?? true) && (
               <ProfileSwitcher activeApp={activeApp} />
             )}
+          <HappyTokenLoginButton />
           {activeApp === "hermes" && (
             <Button
               variant="quiet"

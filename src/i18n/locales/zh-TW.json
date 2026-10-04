@@ -4546,5 +4546,14 @@
       "refresh": "重新整理額度",
       "refreshAria": "重新整理 {{login}} 的額度"
     }
+  },
+  "happyToken": {
+    "login": "登录 HappyToken",
+    "sync": "同步 HappyToken",
+    "syncing": "正在同步分组…",
+    "help": "登录后自动导入账户全部可用编程模型分组；选择分组即可启用",
+    "account": "当前账户：{{account}}。点击重新登录并同步分组。",
+    "synced": "已同步 {{count}} 项配置：{{groups}}。选择分组即可启用。",
+    "openFailed": "无法打开 HappyToken 登录窗口，请重试"
   }
 }
