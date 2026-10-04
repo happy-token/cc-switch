@@ -1,0 +1,73 @@
+name: HappySwitch Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: happy-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Universal
+            os: macos-14
+            target: universal-apple-darwin
+            bundles: dmg
+          - name: Windows x64
+            os: windows-2022
+            target: x86_64-pc-windows-msvc
+            bundles: msi,nsis
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install macOS targets
+        if: runner.os == 'macOS'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack install
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Type check
+        run: pnpm typecheck
+      - name: Account regression tests
+        run: pnpm exec vitest run tests/components/HappyTokenLoginButton.test.tsx
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+      - name: Build installers
+        run: pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - name: Collect installers and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          find src-tauri/target/${{ matrix.target }}/release/bundle -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*-setup.exe' \) -exec cp {} release-assets/ \;
+          test -n "$(find release-assets -type f -print -quit)"
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          files = sorted(Path('release-assets').iterdir())
+          Path('release-assets/SHA256SUMS-${{ runner.os }}.txt').write_text(''.join(hashlib.file_digest(p.open('rb'), 'sha256').hexdigest() + '  ' + p.name + '\n' for p in files))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HappySwitch-${{ runner.os }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 14
