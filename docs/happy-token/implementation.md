@@ -56,8 +56,8 @@
 ## 验证状态
 
 - 前端 `pnpm typecheck` 与 `pnpm build:renderer` 已通过。
-- 原有前端测试全量运行：182 个文件、2,112 项测试通过（包含新增登录桥接的 9 项测试）。
-- 最终定向前端测试：登录桥接 9 项、登录按钮交互 3 项全部通过。
+- 内置登录版本曾全量运行前端测试：182 个文件、2,112 项测试通过（包含新增登录桥接的 9 项测试）。
+- 内置登录版本定向前端测试曾通过登录桥接 9 项、按钮交互 3 项；浏览器版本已移除旧桥接脚本，当前验证见文末。
 - Rust `cargo check --locked` 已通过；最终登录后端定向测试 5 项全部通过。
 - macOS debug 桌面打包已成功，实际启动可显示登录按钮并打开 Gateway → Casdoor 登录页；取消登录恢复按钮已验证。调试数据目录使用 `CC_SWITCH_TEST_HOME`。
 - 最后一轮编译曾因磁盘空间不足失败；使用 `cargo clean -p cc-switch` 清理本项目构建缓存后，以关闭增量缓存的方式重跑 Rust 测试成功。
@@ -99,10 +99,19 @@
 ## 浏览器登录实现与验证（2026-10-04）
 
 - 用户同意跨仓库开发；HappySwitch 已改为默认浏览器，gateway-sso 增加 `/sso/desktop` 与 start/approve/poll/cancel 接口。
-- 桌面旧内置登录脚本与对应桥接测试已删除；旧 macOS 安装包和当前运行的本地测试进程仍为此前内置登录版本，不能当作新功能产物。
+- 桌面旧内置登录脚本与对应桥接测试已删除；当前运行的旧本地测试进程仍为内置登录版本，新浏览器登录安装包见下节。
 - 本轮前端类型检查、renderer 构建、等待窗口 4 项交互测试通过；Rust release cargo check 通过，Rust 定向测试 4 项通过。
-- gateway-sso 工作区 59 项测试通过（含本轮 6 项协议测试及用户此前未提交的测试）；从独立的已提交版本复查 58 项测试通过，TypeScript 检查与 Wrangler dry-run 打包通过。部署应使用该独立提交版本，保留工作区用户既有修改。
+- gateway-sso 工作区 60 项测试通过（含本轮 7 项协议测试及用户此前未提交的测试）；从独立的已提交版本复查 59 项测试通过，TypeScript 检查与 Wrangler dry-run 打包通过。部署应使用该独立提交版本，保留工作区用户既有修改。
 - Workerd/Miniflare SQLite Durable Object 实际运行验证了创建、授权页、pending、取消与拒绝已取消兑换。
 - 浏览器本地模拟账户授权页可显示当前账户、验证码和授权范围，确认后显示返回 HappySwitch 提示；模拟验证不代表真实网关 Cookie、令牌同步或真实账户链路已通过。
 - HappyAPIWeb 根 TypeScript 检查与 Next.js 构建通过；未改官网页面，不将 Worker 页验证视为官网全部交互回归。
 - 未部署 Worker，未改变生产 Casdoor 或网关配置；真实浏览器登录仍等待发布。部署与回滚见 `../HappyAPIWeb/gateway-sso/DESKTOP_LOGIN.md`。
+
+### 浏览器登录版 macOS 包
+
+- 桌面源码提交 `e6f9cb63`，网关可部署源码提交 `d7e17f9`（HappyAPIWeb）；均已直接推送至各自 main。
+- 新 .app 已签名、公证 Accepted 并装订票据，公证 ID `0db1ee31-7614-4e72-b19f-f378707cd98f`；签名与 Gatekeeper 检查通过。
+- Tauri 内置 DMG 脚本失败后改用 hdiutil；新 DMG 已签名、公证 Accepted 并装订票据，ID `1ec05d69-ca44-4976-8827-146dec2de7af`。DMG 签名、stapler validate、hdiutil verify 全部通过。
+- 最终稳定副本：`release/HappySwitch_3.20.4_aarch64_browser_login.dmg`；SHA-256 `cf87443ddda8b689ed9b5afad61dbec0c42e4016e99f54d4cf29061e399cad81`。
+- 先前旧包备份放在 Tauri 构建目录，被打包过程清理，当前不宣称保留了旧二进制；可从历史源码重建。最终包已移出构建目录，release 被 Git 忽略。
+- 当前授权不包括生产 Worker 部署；尚未上线新接口或实测真实账户浏览器授权，不自动重启用户当前测试进程。

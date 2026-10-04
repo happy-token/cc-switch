@@ -12,23 +12,23 @@ Rust 工具链由根目录 `rust-toolchain.toml` 固定；Tauri 桌面构建仍�
 ## 使用登录自动配置
 
 1. 打开助手供应商页面，点击「登录 HappyToken」。
-2. 在弹出的官方 Gateway / Casdoor 窗口完成登录。
+2. 在系统默认浏览器的官方 Gateway / Casdoor 页面完成登录，核对浏览器与 HappySwitch 中相同的验证码，再点击「允许并同步分组」。
 3. 等待自动同步结果。账户实际可用的每个分组都会尝试同步；部分失败或没有编程模型时显示原因。
 4. 在对应 Claude Code、Codex、Gemini 页面选择 `HappyToken · 分组名称` 配置启用。
 5. 需要刷新令牌或获取新分组时，再次点击「同步 HappyToken」。会复用有效的专用分组令牌，并更新已有配置。
 
 登录后会为缺少专用令牌的分组创建 HappySwitch 专用 API Key。令牌没有独立额度上限或到期时间，受账户余额和分组权限约束，可在 Gateway 控制台撤销。
 
-当前「同步」复用登录窗口中的现有 Gateway 会话；独立的切换账户或退出登录入口尚未实现。
+当前「同步」复用系统浏览器中的 Gateway 会话并再次确认授权；桌面端不读取浏览器 Cookie。需要更换账户时在浏览器管理 Gateway 登录，桌面端独立退出登录入口尚未实现。
 
 ## 本次验证命令
 
 ```sh
 pnpm typecheck
 pnpm build:renderer
-pnpm exec vitest run tests/utils/happyTokenLogin.test.ts tests/components/HappyTokenLoginButton.test.tsx
-cargo check --manifest-path src-tauri/Cargo.toml --locked
-cargo test --manifest-path src-tauri/Cargo.toml --locked --lib commands::happy_token::tests
+pnpm exec vitest run tests/components/HappyTokenLoginButton.test.tsx
+CARGO_INCREMENTAL=0 cargo check --manifest-path src-tauri/Cargo.toml --locked --release
+CARGO_INCREMENTAL=0 cargo test --manifest-path src-tauri/Cargo.toml --locked --release --lib commands::happy_token::tests
 pnpm tauri build --debug --bundles app
 ```
 
@@ -48,4 +48,4 @@ pnpm tauri build --debug --bundles app
 
 最新源码在默认浏览器完成登录与授权。桌面端显示验证码，浏览器确认相同验证码与当前账户后点击“允许并同步分组”；无需在内置窗口输入密码。可以重新打开浏览器或取消，授权最长 10 分钟。
 
-这要求 gateway-sso 的桌面授权接口先发布。当前已公证的 3.20.4 包仍为此前内置登录版本；新源码已完成本地验证，但尚未部署新接口或生成新签名安装包。
+这要求 gateway-sso 的桌面授权接口先发布。新版签名安装包已完成公证，稳定副本为 `release/HappySwitch_3.20.4_aarch64_browser_login.dmg`；生产新接口尚未部署，真实浏览器登录链路还不能验证。当前运行的旧测试进程不等于这个新包。
