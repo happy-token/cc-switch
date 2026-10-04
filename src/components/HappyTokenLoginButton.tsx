@@ -10,7 +10,6 @@ import {
   RefreshCw,
   LogOut,
   ShieldCheck,
-  Plus,
 } from "lucide-react";
 import {
   Dialog,
@@ -230,80 +229,89 @@ export function HappyTokenLoginButton({
 
   const accountDetails = (
     <>
-      <div className="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-subtle text-fg-2">
+      <h2 className="border-b border-border px-5 py-3 font-medium text-fg-1">
+        {t("happyToken.accountTitle")}
+      </h2>
+      <div className="flex items-center gap-3 px-5 py-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-subtle text-fg-2">
           <UserRound className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <p className="text-caption text-fg-3">HappyToken</p>
           <p className="break-words font-medium text-fg-1">{account}</p>
+          <p className="text-caption text-fg-3">{t("happyToken.signedIn")}</p>
         </div>
       </div>
-      <div className="px-5 py-4">
-        <dl>
-          <div>
-            <dt className="text-caption text-fg-2">
-              {t("happyToken.balance")}
-            </dt>
-            <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
-              {overview ? amount(overview.balance) : "—"}
-            </dd>
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-3 text-caption">
-            <dt className="text-fg-2">{t("happyToken.consumed")}</dt>
-            <dd className="tabular-nums text-fg-1">
-              {overview ? amount(overview.consumed) : "—"}
-            </dd>
-          </div>
-        </dl>
-        <p className="mt-3 whitespace-normal text-caption leading-relaxed text-fg-3">
-          {overview
-            ? t("happyToken.updatedAt", {
-                time: new Date(overview.updatedAt).toLocaleString(),
-              })
-            : t("happyToken.overviewUnavailable")}
-        </p>
-        <div className="mt-4 grid grid-cols-1 gap-2">
-          <Button
-            variant="solid"
-            size="regular"
-            onClick={() => void openAccountPage("/wallet")}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t("happyToken.recharge")}
-          </Button>
-          <Button
-            variant="outline"
-            size="regular"
-            onClick={() => void openAccountPage("/dashboard")}
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            {t("happyToken.console")}
-          </Button>
+      <dl className="space-y-2 border-t border-border bg-subtle/50 px-5 py-4 text-caption">
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-fg-2">{t("happyToken.balance")}</dt>
+          <dd className="font-medium tabular-nums text-fg-1">
+            {overview ? amount(overview.balance) : "—"}
+          </dd>
         </div>
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-fg-2">{t("happyToken.consumed")}</dt>
+          <dd className="font-medium tabular-nums text-fg-1">
+            {overview ? amount(overview.consumed) : "—"}
+          </dd>
+        </div>
+      </dl>
+      <div className="border-t border-border px-2 py-2">
+        <h3 className="px-3 pb-1 pt-1 text-xs text-fg-3">
+          {t("happyToken.accountServices")}
+        </h3>
+        <Button
+          variant="quiet"
+          size="regular"
+          className="w-full justify-between"
+          onClick={() => void openAccountPage("/wallet")}
+        >
+          {t("happyToken.recharge")}
+          <ExternalLink className="h-3.5 w-3.5 text-fg-3" />
+        </Button>
+        <Button
+          variant="quiet"
+          size="regular"
+          className="w-full justify-between"
+          onClick={() => void openAccountPage("/dashboard")}
+        >
+          {t("happyToken.console")}
+          <ExternalLink className="h-3.5 w-3.5 text-fg-3" />
+        </Button>
+      </div>
+      <div className="border-t border-border px-2 py-2">
+        <h3 className="px-3 pb-1 pt-1 text-xs text-fg-3">
+          {t("happyToken.localConfiguration")}
+        </h3>
+        <Button
+          variant="quiet"
+          size="regular"
+          className="w-full justify-between"
+          disabled={status !== "idle" || opening || loggingOut}
+          onClick={() => void login()}
+        >
+          {t("happyToken.sync")}
+          <RefreshCw className="h-3.5 w-3.5 text-fg-3" />
+        </Button>
       </div>
       <div className="border-t border-border p-2">
         <Button
           variant="quiet"
           size="regular"
-          className="w-full justify-start"
-          disabled={status !== "idle" || opening || loggingOut}
-          onClick={() => void login()}
-        >
-          <RefreshCw className="h-4 w-4 text-fg-2" />
-          {t("happyToken.sync")}
-        </Button>
-        <Button
-          variant="quiet"
-          size="regular"
-          className="w-full justify-start"
+          className="w-full justify-between"
           disabled={status !== "idle" || opening || loggingOut}
           onClick={() => void logout()}
         >
-          <LogOut className="h-4 w-4 text-fg-2" />
           {t("happyToken.logout")}
+          <LogOut className="h-3.5 w-3.5 text-fg-3" />
         </Button>
       </div>
+      <p className="border-t border-border px-5 py-3 text-xs leading-relaxed text-fg-3">
+        {overview
+          ? t("happyToken.updatedAt", {
+              time: new Date(overview.updatedAt).toLocaleString(),
+            })
+          : t("happyToken.overviewUnavailable")}
+      </p>
     </>
   );
 

@@ -4547,6 +4547,11 @@
     }
   },
   "happyToken": {
+    "accountTitle": "账户",
+    "signedIn": "已登录 HappyToken",
+    "accountServices": "账户服务",
+    "localConfiguration": "本地配置",
+
     "logout": "退出登录",
     "loggedOut": "已退出登录，已导入配置保留",
     "logoutFailed": "退出登录失败，请重试",
@@ -4569,7 +4574,7 @@
     "consumed": "累计消费",
     "recharge": "充值",
     "console": "控制台",
-    "updatedAt": "最近同步：{{time}}。同步配置可更新账户数据。",
+    "updatedAt": "最近同步：{{time}}",
     "overviewUnavailable": "账户金额暂不可用，请到控制台查看。",
     "linkFailed": "无法打开浏览器，请重试",
     "accountLoadFailed": "无法读取已同步账户，请重新登录"

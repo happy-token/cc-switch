@@ -4547,6 +4547,11 @@
     }
   },
   "happyToken": {
+    "accountTitle": "Account",
+    "signedIn": "Signed in to HappyToken",
+    "accountServices": "Account services",
+    "localConfiguration": "Local configuration",
+
     "logout": "Log out",
     "loggedOut": "Logged out; imported configurations retained",
     "logoutFailed": "Could not log out. Please retry.",
@@ -4569,7 +4574,7 @@
     "consumed": "Total spent",
     "recharge": "Recharge",
     "console": "Console",
-    "updatedAt": "Last synced: {{time}}. Sync configuration to update account data.",
+    "updatedAt": "Last synced: {{time}}",
     "overviewUnavailable": "Account amounts are unavailable. Check the console.",
     "linkFailed": "Could not open the browser. Please retry.",
     "accountLoadFailed": "Could not load the saved account. Please sign in again."

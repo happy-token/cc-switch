@@ -4547,6 +4547,11 @@
     }
   },
   "happyToken": {
+    "accountTitle": "アカウント",
+    "signedIn": "HappyToken にログイン済み",
+    "accountServices": "アカウントサービス",
+    "localConfiguration": "ローカル設定",
+
     "logout": "ログアウト",
     "loggedOut": "ログアウトしました。インポート済み設定は保持されます",
     "logoutFailed": "ログアウトできませんでした。再試行してください",
@@ -4569,7 +4574,7 @@
     "consumed": "累計消費",
     "recharge": "チャージ",
     "console": "コンソール",
-    "updatedAt": "最終同期：{{time}}。設定の同期でアカウント情報を更新できます。",
+    "updatedAt": "最終同期：{{time}}",
     "overviewUnavailable": "金額を取得できません。コンソールで確認してください。",
     "linkFailed": "ブラウザーを開けません。再試行してください。",
     "accountLoadFailed": "保存されたアカウントを読み込めません。再度ログインしてください。"
