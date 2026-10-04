@@ -338,7 +338,9 @@ fn restrict_login_window(
 ) -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
     move |invoke| {
         if invoke.message.webview_ref().label() == "happy-token-login" {
-            invoke.resolver.reject("Native commands are disabled in the login window");
+            invoke
+                .resolver
+                .reject("Native commands are disabled in the login window");
             return true;
         }
         handler(invoke)
