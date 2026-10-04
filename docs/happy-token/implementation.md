@@ -73,3 +73,10 @@
 - Apple 公证返回 HTTP 403：开发者团队有未签署或已过期的协议；需要账户持有人在 Apple Developer 账户处理协议后再重试公证。构建凭证未写入仓库。
 - 由于公证阶段中断 Tauri 打包，使用 `hdiutil` 生成本机 DMG 并以同一 Developer ID 签名；产物位于 `src-tauri/target/release/bundle/dmg/HappySwitch_3.20.4_aarch64.dmg`。
 - DMG 的 `codesign --verify` 与 `hdiutil verify` 均通过；`stapler validate` 确认应用无公证票据，`spctl --assess` 返回 `Unnotarized Developer ID`。当前不能通过 Gatekeeper 分发检查；本次没有发布 GitHub Release。
+
+### 认证方式复核
+
+- HappyRouter 的 `../tmp/HappyRouter/scripts/notarize.cjs` 使用 `@electron/notarize` 调用 `notarytool`，认证参数是 Apple ID、应用专用密码和 Team ID。HappyCode、TokenUsage 使用同类流程。
+- 本轮使用的 Apple ID、Team ID 与 HappyRouter 应用专用密码经本地比对均一致；没有把这些值输出到日志或文档。Tauri 的 `APPLE_PASSWORD` 对应 Electron 的 `APPLE_APP_SPECIFIC_PASSWORD`。
+- 绕过 Tauri，直接使用 HappyRouter、HappyCode、TokenUsage 各自的本地凭证执行只读 `notarytool history`，三者均返回相同的协议 HTTP 403。错误不是 HappySwitch 独有，也不依赖其 Bundle ID。
+- Apple 返回的错误指向团队协议/账户资格；尚未登录开发者后台核实具体协议，不能确定是尚未签署、过期，还是 Apple 后台状态未同步。历史项目采用何种流程已确认，但过去每个安装包是否公证成功未核实。
