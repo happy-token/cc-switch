@@ -2,6 +2,11 @@ name: HappySwitch Build
 
 on:
   workflow_dispatch:
+    inputs:
+      sign_macos:
+        description: Sign and notarize macOS installers
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -50,8 +55,57 @@ jobs:
         with:
           workspaces: src-tauri
           key: ${{ matrix.target }}
+      - name: Import Apple certificate
+        if: runner.os == 'macOS' && inputs.sign_macos
+        shell: bash
+        env:
+          CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$CERTIFICATE"
+          printf '%s' "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/happyswitch.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/happyswitch.keychain-db"
+          security set-keychain-settings -lut 21600 "$RUNNER_TEMP/happyswitch.keychain-db"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/happyswitch.keychain-db"
+          security import "$RUNNER_TEMP/happyswitch.p12" -k "$RUNNER_TEMP/happyswitch.keychain-db" -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s "$RUNNER_TEMP/happyswitch.keychain-db" "$HOME/Library/Keychains/login.keychain-db"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$RUNNER_TEMP/happyswitch.keychain-db"
+          IDENTITY=$(security find-identity -v -p codesigning "$RUNNER_TEMP/happyswitch.keychain-db" | sed -n 's/.*"\(Developer ID Application:.*\)".*/\1/p' | head -1)
+          test -n "$IDENTITY"
+          echo "APPLE_SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          rm -f "$RUNNER_TEMP/happyswitch.p12"
       - name: Build installers
+        shell: bash
+        env:
+          APPLE_ID: ${{ runner.os == 'macOS' && inputs.sign_macos && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ runner.os == 'macOS' && inputs.sign_macos && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ runner.os == 'macOS' && inputs.sign_macos && secrets.APPLE_TEAM_ID || '' }}
         run: pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - name: Notarize and verify macOS DMG
+        if: runner.os == 'macOS' && inputs.sign_macos
+        shell: bash
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          APP="src-tauri/target/universal-apple-darwin/release/bundle/macos/HappySwitch.app"
+          codesign --verify --deep --strict "$APP"
+          xcrun stapler validate "$APP"
+          DMG=$(find src-tauri/target/universal-apple-darwin/release/bundle/dmg -name '*.dmg' -type f -print -quit)
+          test -n "$DMG"
+          xcrun notarytool submit "$DMG" --apple-id "$APPLE_ID" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait --timeout 30m
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+      - name: Clean up Apple certificate
+        if: always() && runner.os == 'macOS' && inputs.sign_macos
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/happyswitch.p12"
+          security delete-keychain "$RUNNER_TEMP/happyswitch.keychain-db" || true
       - name: Collect installers and checksums
         shell: bash
         run: |
