@@ -4572,8 +4572,6 @@
     "updatedAt": "Last synced: {{time}}. Sync configuration to update account data.",
     "overviewUnavailable": "Account amounts are unavailable. Check the console.",
     "linkFailed": "Could not open the browser. Please retry.",
-    "accountLoadFailed": "Could not load the saved account. Please sign in again.",
-    "settings": "Account settings",
-    "settingsHelp": "Manage your balance, configuration sync, and sign-in."
+    "accountLoadFailed": "Could not load the saved account. Please sign in again."
   }
 }

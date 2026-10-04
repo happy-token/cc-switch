@@ -11,8 +11,6 @@ import {
   LogOut,
   ShieldCheck,
   Plus,
-  Settings,
-  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -91,7 +89,6 @@ export function HappyTokenLoginButton({
   const [status, setStatus] = useState<"idle" | "login" | "syncing">("idle");
   const [summary, setSummary] = useState<AccountSummary | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const synced = useRef(false);
   const loggedOut = useRef(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -150,7 +147,6 @@ export function HappyTokenLoginButton({
       synced.current = true;
       setSummary(null);
       setMenuOpen(false);
-      setAccountSettingsOpen(false);
       setStatus("idle");
       setCode("");
       toast.success(t("happyToken.loggedOut"));
@@ -164,7 +160,6 @@ export function HappyTokenLoginButton({
   const login = async () => {
     loggedOut.current = false;
     setMenuOpen(false);
-    setAccountSettingsOpen(false);
     setStatus("login");
     setOpening(true);
     try {
@@ -325,44 +320,11 @@ export function HappyTokenLoginButton({
             aria-label={t("happyToken.accountMenu", { account })}
           >
             {accountDetails}
-            <div className="border-t border-border p-2">
-              <Button
-                variant="quiet"
-                className="w-full justify-start"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setAccountSettingsOpen(true);
-                }}
-              >
-                <Settings className="h-4 w-4 text-fg-2" />
-                {t("happyToken.settings")}
-              </Button>
-            </div>
           </PopoverContent>
         </Popover>
       ) : (
         trigger
       )}
-      <Dialog open={accountSettingsOpen} onOpenChange={setAccountSettingsOpen}>
-        <DialogContent className="max-w-[min(28rem,calc(100vw-2rem))] gap-0 overflow-y-auto p-0">
-          <Button
-            variant="quiet"
-            size="icon"
-            className="absolute right-3 top-3"
-            aria-label={t("common.close")}
-            onClick={() => setAccountSettingsOpen(false)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          <DialogHeader className="px-5 pt-6 pb-4 pr-12">
-            <DialogTitle>{t("happyToken.settings")}</DialogTitle>
-            <DialogDescription>
-              {t("happyToken.settingsHelp")}
-            </DialogDescription>
-          </DialogHeader>
-          {accountDetails}
-        </DialogContent>
-      </Dialog>
       <Dialog
         open={status !== "idle" && !!code}
         onOpenChange={(open) => {

@@ -98,7 +98,7 @@ describe("HappyToken login button", () => {
     expect(screen.getByRole("button")).toHaveTextContent("Test");
   });
 
-  it("opens account settings and closes them before browser authorization", async () => {
+  it("uses one account panel without duplicate account settings", async () => {
     mocks.invoke.mockImplementation(async (command: string) =>
       command === "happy_token_account"
         ? {
@@ -117,28 +117,15 @@ describe("HappyToken login button", () => {
       expect(screen.getByRole("button")).toHaveTextContent("Fixture"),
     );
     fireEvent.click(screen.getByRole("button"));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "happyToken.settings" }),
-    );
-    expect(screen.getByRole("dialog")).toHaveTextContent(
-      "happyToken.settingsHelp",
-    );
-    expect(screen.getByText("¥985.97")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "common.close" }));
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-    );
-    fireEvent.click(screen.getByRole("button"));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "happyToken.settings" }),
-    );
+    expect(await screen.findByText("¥985.97")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "happyToken.settings" }),
+    ).not.toBeInTheDocument();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "happyToken.sync" }));
     });
-    expect(
-      screen.queryByText("happyToken.settingsHelp"),
-    ).not.toBeInTheDocument();
     expect(screen.getByRole("dialog")).toHaveTextContent("1234ABCD");
+    expect(screen.queryByText("¥985.97")).not.toBeInTheDocument();
   });
 
   it("reports native login launch failure and resets the button", async () => {
