@@ -21,3 +21,5 @@ HappyToken 网站添加独立 HappySwitch 下载入口，保留官方原版 CC S
 ## 当前状态（2026-10-04）
 
 用户要求 GitHub Actions 验证并发布 Release，已允许将 HappyRouter 对应 Apple 签名/公证凭据保存为该仓库 Actions Secrets。首版定为 3.20.5。初轮 Windows 发现 PowerShell 逗号参数解析问题，已切换 Bash；正式构建 37212480889 运行中，尚不能宣称成功或发布完成。
+
+CI 全量测试发现分组清理绕过统一当前供应商入口，已改用 mode::current::is_referenced，保护设备直连指针、数据库引用和代理路由。需等待修正提交的 CI 与最终构建，旧产物不用于发布。

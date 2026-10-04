@@ -604,12 +604,8 @@ async fn sync_snapshot(app: &tauri::AppHandle, snapshot: Snapshot) -> Result<Syn
                     || ((app_type.is_additive_mode()
                         || app_type == crate::app_config::AppType::Pi)
                         && entry.group != "image")
-                    || state
-                        .db
-                        .get_current_provider(&entry.app)
-                        .map_err(|_| "无法读取当前配置")?
-                        .as_deref()
-                        == Some(&entry.id);
+                    || crate::mode::current::is_referenced(&state.db, &app_type, &entry.id)
+                        .map_err(|_| "无法读取当前配置")?;
                 if !active && matches_managed(&entry, &existing) {
                     crate::services::ProviderService::delete(state.inner(), app_type, &entry.id)
                         .map_err(|_| "无法清理旧自动配置")?;
