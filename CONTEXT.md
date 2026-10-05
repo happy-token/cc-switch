@@ -86,3 +86,6 @@ _避免_：供应商（分组和 CC Switch 配置并非同一实体）。
 
 
 2026-10-05：HappySwitch 3.20.5 已通过 GitHub Actions 两平台安装包构建及全量 CI，并正式发布 Release（happy-v3.20.5，构建提交 371918a4）。macOS Universal 已签名、公证；Windows x64 MSI/EXE 未做代码签名，ARM64 未验证。官网独立下载专区已填入真实产物，生产部署已获明确授权并完成；下载页 https://happy-token.cn/zh/downloads。完整证据见 docs/happy-token/release.md。
+
+
+2026-10-05 用户要求简短、易懂的 HappySwitch 图文教程，减少术语和重复提示。用户教程见 docs/happy-token/user-guide.md；官网新增中英文 /docs/happyswitch，配图标明操作示意，使用虚构身份与金额，保留原版手动接入。生产教程发布尚未授权。
