@@ -88,4 +88,7 @@ _避免_：供应商（分组和 CC Switch 配置并非同一实体）。
 2026-10-05：HappySwitch 3.20.5 已通过 GitHub Actions 两平台安装包构建及全量 CI，并正式发布 Release（happy-v3.20.5，构建提交 371918a4）。macOS Universal 已签名、公证；Windows x64 MSI/EXE 未做代码签名，ARM64 未验证。官网独立下载专区已填入真实产物，生产部署已获明确授权并完成；下载页 https://happy-token.cn/zh/downloads。完整证据见 docs/happy-token/release.md。
 
 
-2026-10-05 用户要求简短、易懂的 HappySwitch 图文教程，减少术语和重复提示。用户教程见 docs/happy-token/user-guide.md；官网新增中英文 /docs/happyswitch，配图标明操作示意，使用虚构身份与金额，保留原版手动接入。生产教程发布尚未授权。
+2026-10-05 用户要求简短、易懂的 HappySwitch 图文教程，减少术语和重复提示。用户教程见 docs/happy-token/user-guide.md；官网新增中英文 /docs/happyswitch，配图标明操作示意，使用虚构身份与金额，保留原版手动接入。生产教程发布已获授权并完成，见下方发布记录。
+
+
+2026-10-05：用户明确回复“允许”，授权新版图文教程生产发布。网站提交 458be8c9 的 OpenNext 构建完成，预览检查通过后发布至 happy-api-web-next；生产版本 fa1b0f0b-7150-487f-ba35-04f5feae196b，前版本 7fcf4d22-bac6-4d92-b783-72ab2ccc0849。中英文教程、GPT/Codex/下载页入口、六张 SVG、首页、管理会话与 sitemap 均 HTTP 200 且内容核对通过；浏览器已确认线上中文图文教程。此记录取代此前教程“未授权/未发布”状态。未部署 Gateway 或 installer-sync。
