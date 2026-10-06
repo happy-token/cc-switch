@@ -92,3 +92,6 @@ _避免_：供应商（分组和 CC Switch 配置并非同一实体）。
 
 
 2026-10-05：用户明确回复“允许”，授权新版图文教程生产发布。网站提交 458be8c9 的 OpenNext 构建完成，预览检查通过后发布至 happy-api-web-next；生产版本 fa1b0f0b-7150-487f-ba35-04f5feae196b，前版本 7fcf4d22-bac6-4d92-b783-72ab2ccc0849。中英文教程、GPT/Codex/下载页入口、六张 SVG、首页、管理会话与 sitemap 均 HTTP 200 且内容核对通过；浏览器已确认线上中文图文教程。此记录取代此前教程“未授权/未发布”状态。未部署 Gateway 或 installer-sync。
+
+
+2026-10-06：用户明确授权发布新版 Gateway 单栏授权页。从 HappyAPIWeb 已提交 b0a44d3c 副本发布（授权页源码 1b1ce4b），未带入未提交的 desktop-session/start-page/测试改动。Gateway 版本由 a5ecde70-aaac-4150-9139-c1a6f4a6f97d 更新为 e117d932-e871-4de0-aecf-aa8b1e3c3c8d；63 项测试、类型检查和 dry-run 通过。线上新版页面 HTTP 200、未授权轮询 202；Chrome 已有账户显示及授权按钮正常，测试未批准授权。单栏样式已生产发布，取代历史“未发布”记录；成功状态收起权限与验证码的代码已部署，本次未重新执行真实账户完整授权/兑换。
